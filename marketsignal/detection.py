@@ -18,7 +18,8 @@ def _signal_score(change_pp: float, threshold_pp: float, volume: float, liquidit
     return round(movement + participation + depth)
 
 
-def detect_signals(store: Storage, markets: list[Market], observed_at: int) -> list[Signal]:
+def detect_signals(store: Storage, markets: list[Market], observed_at: int,
+                   windows: tuple[tuple[int, float, int], ...] = WINDOWS) -> list[Signal]:
     bucket = store.bucket(observed_at)
     created: list[Signal] = []
     for market in markets:
@@ -27,7 +28,7 @@ def detect_signals(store: Storage, markets: list[Market], observed_at: int) -> l
         if store.recent_signal_exists(market.market_id, bucket):
             continue
         candidates: list[Signal] = []
-        for hours, threshold, tolerance in WINDOWS:
+        for hours, threshold, tolerance in windows:
             baseline = store.reference_snapshot(market.market_id, bucket - hours * 3600, tolerance)
             if baseline is None:
                 continue
@@ -35,9 +36,12 @@ def detect_signals(store: Storage, markets: list[Market], observed_at: int) -> l
             delta = round((market.yes_price - reference) * 100, 3)
             if abs(delta) < threshold:
                 continue
+            # Report the observed elapsed time, not merely the target window.
+            # Daily schedules can run late and may skip a calendar day.
+            elapsed_hours = max(1, round((bucket - baseline_at) / 3600))
             candidates.append(Signal(
                 market_id=market.market_id, observed_at=bucket, baseline_at=baseline_at,
-                window_hours=hours, previous_price=reference,
+                window_hours=elapsed_hours, previous_price=reference,
                 current_price=market.yes_price, change_pp=delta,
                 score=_signal_score(delta, threshold, market.volume_24h, market.liquidity),
                 volume_24h=market.volume_24h, liquidity=market.liquidity,

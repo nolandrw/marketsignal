@@ -19,9 +19,12 @@ def _currency(value: float) -> str:
     return f"${value:,.0f}"
 
 
-def _signal_rows(signals: list[dict], is_demo: bool = False) -> str:
+def _signal_rows(signals: list[dict], is_demo: bool = False, is_daily: bool = False) -> str:
     if not signals:
-        return '<tr><td colspan="5" class="empty">No qualified changes yet. The detector needs a 1-hour or 24-hour observation baseline.</td></tr>'
+        message = ('No movements passed the daily threshold in this snapshot. '
+                   'The first day establishes the baseline.' if is_daily else
+                   'No qualified changes yet. The detector needs a 1-hour or 24-hour observation baseline.')
+        return f'<tr><td colspan="5" class="empty">{message}</td></tr>'
     rows = []
     for signal in signals:
         change = signal["change_pp"]
@@ -63,9 +66,15 @@ def render_dashboard(store: Storage, output_file: str | Path) -> Path:
     data = store.dashboard_data()
     stats = data["stats"]
     is_demo = data["dataset"] == "demo"
+    is_daily = data["dataset"] == "daily"
     last_run = data["runs"][0] if data["runs"] else None
+    if is_daily and last_run:
+        latest_bucket = store.bucket(last_run["started_at"])
+        data["signals"] = [s for s in data["signals"] if s["observed_at"] == latest_bucket]
     generated_at = _datetime(int(datetime.now(timezone.utc).timestamp()))
-    status_label = "Synthetic demonstration" if is_demo else "Read-only market observations"
+    status_label = "Synthetic demonstration" if is_demo else ("Daily market briefing" if is_daily else "Read-only market observations")
+    signals_caption = "Daily observations · elapsed interval shown" if is_daily else "Threshold-based signals · 1h and 24h"
+    footer_label = "Daily data-only proof of concept · No AI-authored claims" if is_daily else "Prototype v0.2 · Not an autonomous publisher yet"
     warning = (
         '<div class="alert"><strong>DEMO DATA:</strong> All prices and movements on this page are synthetic.</div>'
         if is_demo else
@@ -100,16 +109,16 @@ footer{{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:
 <div class="metric"><strong>{stats["observations"]:,}</strong><span>Snapshots persisted</span></div>
 <div class="metric"><strong>{stats["signals"]:,}</strong><span>Qualified signals</span></div>
 <div class="metric"><strong>{stats["failures"]:,}</strong><span>Recorded failures</span></div></div>
-<section><div class="sectionhead"><h2>Significant movements</h2><span class="aside">Threshold-based signals · 1h and 24h</span></div>
+<section><div class="sectionhead"><h2>Significant movements</h2><span class="aside">{signals_caption}</span></div>
 <div class="tablewrap"><table><thead><tr><th>Contract</th><th class="num">Outcome price</th><th class="num">Change</th><th class="num">Priority</th><th class="num">24h Volume</th></tr></thead>
-<tbody>{_signal_rows(data["signals"], is_demo)}</tbody></table></div></section>
+<tbody>{_signal_rows(data["signals"], is_demo, is_daily)}</tbody></table></div></section>
 <section><div class="sectionhead"><h2>Watchlist</h2><span class="aside">Latest stored quotes</span></div>
 <div class="tablewrap"><table><thead><tr><th>Contract</th><th class="num">Yes price</th><th class="num">24h volume</th><th class="num">Liquidity</th></tr></thead>
 <tbody>{_market_rows(data["markets"])}</tbody></table></div></section>
 <section><div class="sectionhead"><h2>Pipeline health</h2><span class="aside">Latest run: {_datetime(last_run["started_at"]) if last_run else "Not yet run"}</span></div>
 <div class="tablewrap"><table><thead><tr><th>Run time</th><th>Status</th><th class="num">Saved</th><th class="num">New signals</th></tr></thead>
 <tbody>{_run_rows(data["runs"])}</tbody></table></div></section>
-</main><footer><span>Prototype v0.1 · Not an autonomous publisher yet</span><span>Generated {generated_at}</span></footer></div></body></html>"""
+</main><footer><span>{footer_label}</span><span>Generated {generated_at}</span></footer></div></body></html>"""
     path = Path(output_file)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(html, encoding="utf-8")

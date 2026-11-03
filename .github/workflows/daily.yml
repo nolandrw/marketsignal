@@ -1,0 +1,60 @@
+name: Daily MarketSignal
+
+on:
+  schedule:
+    - cron: '17 7 * * *'
+      timezone: America/Los_Angeles
+  workflow_dispatch:
+
+concurrency:
+  group: marketsignal-daily
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    name: Collect, score, and archive
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        # The scoped GITHUB_TOKEN is used only to commit generated data.
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run tests before collecting
+        run: python -m unittest discover -s tests -q
+      - name: Fetch public market data and render data-only report
+        run: python -m marketsignal daily --archive-dir data/archive --out site/index.html
+      - name: Commit immutable daily snapshot and static report
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- data/archive site
+          if ! git diff --cached --quiet; then
+            git commit -m 'data: daily Polymarket observation [skip ci]'
+            git push origin HEAD:main
+          fi
+      - name: Package static site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    name: Publish website (once Pages is enabled)
+    if: ${{ vars.MARKETSIGNAL_PAGES_ENABLED == 'true' }}
+    needs: collect
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy static site
+        id: deployment
+        uses: actions/deploy-pages@v4

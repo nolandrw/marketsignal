@@ -1,7 +1,7 @@
 # MarketSignal — Autonomous Market Intelligence
 
-**Status: tested data foundation and deployable collector scaffold; NOT deployed,
-NOT scheduled and NOT publishing news.**
+**Status: tested data foundation and $0 daily GitHub Actions proof-of-concept
+scaffold; cloud hosting and AI-authored news are not yet activated.**
 
 MarketSignal is a portfolio-oriented, auditable pipeline for detecting meaningful
 changes in prediction-market contracts. It is designed to become a bounded
@@ -22,7 +22,13 @@ python -m unittest discover -s tests -v
 python -m marketsignal demo
 python -m marketsignal collect --max-markets 150 --max-pages 8
 python -m marketsignal report
+python -m marketsignal daily --archive-dir data/archive --out site/index.html
 ```
+
+The `daily` command collects one real snapshot per UTC date, writes an
+immutable JSON archive and renders a static report. The first day normally
+has no movement signals because it establishes the baseline. It needs no
+database service, model API key, paid account or Python dependency.
 
 PostgreSQL support is optional (`python -m pip install '.[postgres]'`). Set
 `DATABASE_URL` to use it; production additionally sets
@@ -51,6 +57,8 @@ suppression window per market.
 - Liquidity and volume gates, simple transparent prioritization score.
 - Duplicate suppression, unit tests, CI, and a static read-only dashboard.
 - A synthetic demo to verify movements without implying they happened.
+- An idempotent daily pipeline with Git-tracked JSON snapshots, replayable
+  movement detection, a static website payload and a scheduled GitHub workflow.
 - Optional PostgreSQL storage with one-time schema setup, 30-day retention
   (preserving signal evidence), stale-run recovery and a CLI health probe.
 - Non-root container image, explicit Secret Manager integration and opt-in
@@ -58,13 +66,13 @@ suppression window per market.
 
 ## What's NOT implemented
 
-- Hosting, a provisioned hosted database, live scheduler or paging alerts.
+- A verified live GitHub Pages deployment, provisioned hosted database or paging alerts.
 - Backfilled history, orderbook spread validation, or statistical calibration.
 - Research/writer/verifier agents, external source verification, or publishing.
 - Cross-market clustering, professional licensing review, or fully unattended operation.
 
 These omissions are intentional. The next milestone requires a **real seven-day
-scheduled collector trial**, historical price backfill, an evaluation dataset,
+scheduled-collector trial**, historical price backfill, an evaluation dataset,
 and a measured shadow pipeline for research/writing/verification. No public
 auto-publishing until quality gates have been demonstrated.
 
@@ -106,21 +114,26 @@ signals -> research agent -> writer agent -> independent verifier
 ```
 
 See [architecture](docs/architecture.md), [quality gates](docs/quality-gates.md),
-[security boundaries](SECURITY.md) and [deployment runbook](docs/deployment.md).
+[security boundaries](SECURITY.md), the [free daily runbook](docs/free-poc.md)
+and [paid-cloud deployment runbook](docs/deployment.md).
 
 ## Low-cost operational strategy
 
-1. **Local pilot:** use this version to prove the API/schema and signal logic.
-2. **Scheduled shadow service:** initialize hosted Postgres, run the collector
-   every 15 minutes, and configure a separately tested external freshness alert.
+1. **Free daily pilot:** GitHub Actions runs once each morning, saving dated
+   public JSON archives to the repo and producing a GitHub Pages-ready report.
+   Hosting is optional until configured in repo settings.
+2. **Scheduled shadow service:** once the pilot justifies it, initialize hosted
+   Postgres, run the collector every 15 minutes, and add a freshness alert.
 3. **Bounded agents:** investigate only qualified signals; enforce token and
    search budgets; record provenance and reject unsupported claims.
 4. **Unattended website:** only permit low-risk, fully checked pieces to
    publish after repeatable replay tests and a shadow evaluation period.
 
-SQLite is intentionally local-only. **Do not schedule collection on ephemeral
-GitHub Actions runners** without durable storage: their local files disappear
-between workflow runs. The included GitHub workflow runs tests only.
+SQLite remains local/in-memory only in the free daily workflow. Its **JSON
+archive is committed to Git**, preserving the observed history between
+ephemeral GitHub Actions runners. Never rely on runner-local SQLite files as
+durable storage. The CI workflow runs tests and the separate `Daily
+MarketSignal` workflow handles scheduled data collection.
 
 ### Deployment remains opt-in
 

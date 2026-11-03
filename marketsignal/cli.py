@@ -11,6 +11,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from .dashboard import render_dashboard
+from .daily import run_daily
 from .detection import detect_signals
 from .gamma import GammaError, discover_markets
 from .models import Market
@@ -101,6 +102,11 @@ def main(argv: list[str] | None = None) -> int:
     health = commands.add_parser("health", help="Fail if the collector is stale or unsuccessful")
     health.add_argument("--db", default="data/marketsignal.db")
     health.add_argument("--max-age-minutes", type=int, default=35)
+    daily = commands.add_parser("daily", help="One daily snapshot and static briefing, no paid services")
+    daily.add_argument("--archive-dir", default="data/archive")
+    daily.add_argument("--out", default="site/index.html")
+    daily.add_argument("--max-markets", type=int, default=150)
+    daily.add_argument("--max-pages", type=int, default=8)
     commands.add_parser("init-db", help="Initialize PostgreSQL schema with a privileged migration account")
     simulate = commands.add_parser("demo", help="Generate a clearly labeled synthetic detector demo")
     simulate.add_argument("--db", default="demo/demo.db")
@@ -115,6 +121,13 @@ def main(argv: list[str] | None = None) -> int:
                        arguments.retention_days)
     if arguments.command == "demo":
         return demo(arguments.db, arguments.out)
+    if arguments.command == "daily":
+        if not 1 <= arguments.max_markets <= 1000 or not 1 <= arguments.max_pages <= 100:
+            parser.error("--max-markets must be 1..1000 and --max-pages 1..100")
+        result = run_daily(arguments.archive_dir, arguments.out,
+                           max_markets=arguments.max_markets, max_pages=arguments.max_pages)
+        print(json.dumps(result, indent=2))
+        return 0
     if arguments.command == "init-db":
         url = os.environ.get("DATABASE_URL")
         if not url:

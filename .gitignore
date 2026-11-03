@@ -11,6 +11,7 @@ dist/
 *.egg-info/
 .env
 .env.*
-data/
+data/*.db
+data/*.db-*
 .coverage
 .DS_Store

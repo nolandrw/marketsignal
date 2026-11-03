@@ -14,6 +14,8 @@ The public-facing output is intended to be static and read-only.
 | Cloud Scheduler -> Cloud Run Job | OAuth service-account token, job-scoped `roles/run.invoker` | `scripts/enable_schedule_gcp.sh` |
 | Cloud Run -> Secret Manager | Managed workload identity, secret-scoped accessor grant | `scripts/deploy_gcp.sh` |
 | CI -> GitHub | Ephemeral checkout credential, read-only and not persisted | `.github/workflows/ci.yml` |
+| Daily workflow -> GitHub | Workflow-scoped `GITHUB_TOKEN` with `contents: write` only to persist generated data | `.github/workflows/daily.yml` |
+| GitHub Pages deploy | Workflow-scoped OIDC token and `pages: write` only when activated | `.github/workflows/daily.yml` |
 | Future model calls | Server-side API credential, not yet implemented | Planned |
 
 The `yes_token_id` in market records is a public Polymarket outcome identifier,

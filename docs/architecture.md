@@ -2,7 +2,7 @@
 
 **Decision date:** 2026-11-02  
 **Owner:** Nolan Watson  
-**Current phase:** Deployable data foundation / awaiting cloud provisioning
+**Current phase:** Free daily proof of concept / optional paid-cloud upgrade
 
 ## Goal
 
@@ -34,6 +34,9 @@ consequence of a measurable, well-guarded autonomous operating process.
   retention preserving signal evidence, stale-run recovery and health checks.
 - Non-root container, optional Cloud Run deployment script and separately
   activated Cloud Scheduler script; **none have been deployed**.
+- Free GitHub Actions daily workflow with versioned JSON records, an in-memory
+  SQLite replay and a static, data-only market briefing; external activation
+  and a live collection trial are still pending.
 
 ## Planned production architecture
 
