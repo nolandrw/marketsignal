@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "case_id": "synthetic-seawall-test-only",
+  "as_of_utc": "2030-01-01T00:00:00Z",
+  "market_reference": {
+    "market_id": "synthetic-demo",
+    "question": "Will a fictional seawall open?",
+    "observed_at": 1800000000,
+    "signal_detected": false,
+    "movement_claimed": false
+  },
+  "sources": [
+    {
+      "source_id": "city_notice",
+      "publisher": "Fictional Crescent Bay Council",
+      "url": "https://example.org/fictional/council",
+      "published_at": "2026-01-01T00:00:00Z",
+      "kind": "official_record",
+      "independent_origin": "fictional-city",
+      "captured_excerpt": "The fictional council postponed a hearing on a coastal barrier while a foundation study is reviewed."
+    },
+    {
+      "source_id": "prior_plan",
+      "publisher": "Fictional Crescent Bay Planning Board",
+      "url": "https://example.org/fictional/planning",
+      "published_at": "2026-01-02T00:00:00Z",
+      "kind": "official_record",
+      "independent_origin": "fictional-planning",
+      "captured_excerpt": "The fictional planners had expected an early construction decision after the initial engineering review."
+    },
+    {
+      "source_id": "study_report",
+      "publisher": "Fictional Harbor Research Institute",
+      "url": "https://example.org/fictional/study",
+      "published_at": "2026-01-03T00:00:00Z",
+      "kind": "original_research",
+      "independent_origin": "fictional-research",
+      "captured_excerpt": "The fictional study raised further questions about foundations but did not establish that the barrier was unsafe."
+    },
+    {
+      "source_id": "civic_story",
+      "publisher": "Fictional Crescent Daily",
+      "url": "https://example.org/fictional/civic-story",
+      "published_at": "2026-01-04T00:00:00Z",
+      "kind": "independent_reporting",
+      "independent_origin": "fictional-journalism",
+      "captured_excerpt": "Residents in the fictional shoreline district remain concerned about flooding during another winter storm season."
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "development",
+      "role": "new_development",
+      "certainty": "reported",
+      "statement": "The fictional city postponed its barrier hearing.",
+      "source_ids": ["city_notice"],
+      "supporting_excerpt": "postponed a hearing on a coastal barrier"
+    },
+    {
+      "claim_id": "expectation",
+      "role": "prior_expectations",
+      "certainty": "reported",
+      "statement": "The fictional planning board previously expected an early decision.",
+      "source_ids": ["prior_plan"],
+      "supporting_excerpt": "planners had expected an early construction decision"
+    },
+    {
+      "claim_id": "possible_cause",
+      "role": "explanation",
+      "certainty": "attributed_hypothesis",
+      "statement": "Unresolved foundational questions might help explain the pause, though their causal role is not independently established.",
+      "source_ids": ["study_report"],
+      "supporting_excerpt": "raised further questions about foundations"
+    },
+    {
+      "claim_id": "stakeholders",
+      "role": "stakes",
+      "certainty": "reported",
+      "statement": "Residents remain concerned about exposure to another storm season.",
+      "source_ids": ["civic_story"],
+      "supporting_excerpt": "remain concerned about flooding during another winter storm season"
+    },
+    {
+      "claim_id": "contrary",
+      "role": "counterpoint",
+      "certainty": "reported",
+      "statement": "The study did not conclude that the fictional barrier was unsafe.",
+      "source_ids": ["study_report"],
+      "supporting_excerpt": "did not establish that the barrier was unsafe"
+    },
+    {
+      "claim_id": "next_steps",
+      "role": "future_watch",
+      "certainty": "reported",
+      "statement": "The council has a future hearing after the study review.",
+      "source_ids": ["city_notice"],
+      "supporting_excerpt": "while a foundation study is reviewed"
+    }
+  ],
+  "unresolved_questions": [
+    "Which engineering results materially changed?",
+    "Who will oversee the next safety review?"
+  ],
+  "article": {
+    "headline": "Fictional Coastal Town Reconsiders the Timeline for Its Seawall",
+    "deck": "A made-up article tests how an evidence dossier moves through a guarded newsroom.",
+    "status": "SHADOW_ONLY",
+    "publication_enabled": false,
+    "human_semantic_factcheck": false,
+    "paragraphs": [
+      {
+        "text": "The fictional city of Crescent Bay has postponed a hearing about a proposed coastal barrier. In this fabricated example, the move would leave residents with additional questions about when they might see protection from a future storm. The purpose of the paragraph is to test a source-linked newsroom handoff.",
+        "claim_ids": ["development", "stakeholders"],
+        "source_ids": ["city_notice", "civic_story"]
+      },
+      {
+        "text": "Before the announcement, the fictional planning board had expected an earlier decision on construction. That expectation gave residents a timeline against which to measure the new delay. In a real investigation the reporter would need the underlying planning memo, dates and corroboration rather than relying on an invented case file.",
+        "claim_ids": ["expectation"],
+        "source_ids": ["prior_plan"]
+      },
+      {
+        "text": "The fictional research institute described unresolved questions about the barrier's foundations. Those questions could be relevant to the council's timetable, but a coincidence is not proof of why the hearing changed. Every theory should be labeled as a theory until the reporter can connect the explanation to direct evidence.",
+        "claim_ids": ["possible_cause"],
+        "source_ids": ["study_report"]
+      },
+      {
+        "text": "There is also a reason not to overstate the uncertainty. The fabricated study did not establish that the barrier design was unsafe. A cautious article should include this counterpoint before suggesting that the entire project is in trouble. That is an editorial requirement the structural test can identify through a citation link.",
+        "claim_ids": ["contrary"],
+        "source_ids": ["study_report"]
+      },
+      {
+        "text": "For residents along the fictional shoreline, however, timing could matter. The example describes their concern about another storm season while the proposed protection remains under review. It is a hypothetical human stake written to exercise evidence tracking and is not a claim about any actual neighborhood or residents.",
+        "claim_ids": ["stakeholders"],
+        "source_ids": ["civic_story"]
+      },
+      {
+        "text": "The fictional council's next consideration will follow its review of the study. A genuine newsroom would assign follow-up questions, check the timeline again, and seek a response from the affected parties before publication. This synthetic passage exists only to confirm that the article stays on hold even after its citation structure passes.",
+        "claim_ids": ["next_steps", "development"],
+        "source_ids": ["city_notice"]
+      }
+    ]
+  }
+}
