@@ -1,11 +1,12 @@
 # MarketSignal — Autonomous Market Intelligence
 
-**Status: tested data foundation and $0 daily GitHub Actions proof-of-concept
-scaffold; cloud hosting and AI-authored news are not yet activated.**
+**Status: $0 daily GitHub Actions / Pages site is deployed; a testable editorial
+agent workflow is implemented in offline shadow mode. AI-authored news and
+paid-cloud hosting are not activated.**
 
 MarketSignal is a portfolio-oriented, auditable pipeline for detecting meaningful
 changes in prediction-market contracts. It is designed to become a bounded
-three-agent newsroom, with documented quality gates, a public track record,
+multi-stage newsroom, with documented quality gates, a public track record,
 and minimal ongoing maintenance.
 
 The collector deliberately makes **no AI calls** and **no publication decisions**.
@@ -23,6 +24,7 @@ python -m marketsignal demo
 python -m marketsignal collect --max-markets 150 --max-pages 8
 python -m marketsignal report
 python -m marketsignal daily --archive-dir data/archive --out site/index.html
+python -m marketsignal editorial-demo
 ```
 
 The `daily` command collects one real snapshot per UTC date, writes an
@@ -59,6 +61,8 @@ suppression window per market.
 - A synthetic demo to verify movements without implying they happened.
 - An idempotent daily pipeline with Git-tracked JSON snapshots, replayable
   movement detection, a static website payload and a scheduled GitHub workflow.
+- Typed editorial-agent stages with independent numeric/citation verification,
+  conservative HOLD decisions, an offline synthetic replay and no publication access.
 - Optional PostgreSQL storage with one-time schema setup, 30-day retention
   (preserving signal evidence), stale-run recovery and a CLI health probe.
 - Non-root container image, explicit Secret Manager integration and opt-in
@@ -66,14 +70,15 @@ suppression window per market.
 
 ## What's NOT implemented
 
-- A verified live GitHub Pages deployment, provisioned hosted database or paging alerts.
+- A provisioned hosted database or paging alerts.
 - Backfilled history, orderbook spread validation, or statistical calibration.
-- Research/writer/verifier agents, external source verification, or publishing.
+- LLM-powered research/writer/verifier adapters, external source retrieval,
+  and automatic article publishing. Only their offline interfaces and guards exist.
 - Cross-market clustering, professional licensing review, or fully unattended operation.
 
 These omissions are intentional. The next milestone requires a **real seven-day
 scheduled-collector trial**, historical price backfill, an evaluation dataset,
-and a measured shadow pipeline for research/writing/verification. No public
+and model-powered, independently verified shadow research/writing. No public
 auto-publishing until quality gates have been demonstrated.
 
 ## Data and editorial integrity
@@ -113,7 +118,8 @@ signals -> research agent -> writer agent -> independent verifier
         -> numerical/source checks -> policy gate -> website publisher
 ```
 
-See [architecture](docs/architecture.md), [quality gates](docs/quality-gates.md),
+See [agent workflow](docs/agents.md), [architecture](docs/architecture.md),
+[quality gates](docs/quality-gates.md),
 [security boundaries](SECURITY.md), the [free daily runbook](docs/free-poc.md)
 and [paid-cloud deployment runbook](docs/deployment.md).
 

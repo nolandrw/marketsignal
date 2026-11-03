@@ -21,7 +21,16 @@ retention, stale-run recovery and safeguards around production credentials.
 - [ ] Standardized settlement-state exclusions
 - [ ] Historical evaluation of ranking precision
 
-## Phase 2: agent quality (not yet implemented)
+## Phase 2: agent quality (offline scaffolding implemented)
+
+- [x] Independent candidate, evidence, numeric-fact and claim contracts
+- [x] Executable synthetic triage → researcher → writer → verifier → editor
+- [x] Unknown/high-risk and causal-claim holds; no publisher attached
+- [x] Unit cases for bad math, evidence provenance, agent failure and retry ID
+- [ ] Actual primary-source retrieval and rights-compliant evidence archive
+- [ ] Model writer, independent verifier and versioned prompt registry
+- [ ] Calibrated evaluation of models and story usefulness on historical cases
+- [ ] Idempotent publication state machine and operational kill switch
 
 Create 100 golden cases covering genuine and spurious repricing, thin books,
 time-window mistakes, event clustering, contract-rule mismatches, bogus URLs,

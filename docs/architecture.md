@@ -35,8 +35,10 @@ consequence of a measurable, well-guarded autonomous operating process.
 - Non-root container, optional Cloud Run deployment script and separately
   activated Cloud Scheduler script; **none have been deployed**.
 - Free GitHub Actions daily workflow with versioned JSON records, an in-memory
-  SQLite replay and a static, data-only market briefing; external activation
-  and a live collection trial are still pending.
+  SQLite replay and a static, data-only market briefing. The first live
+  deployment succeeded on 2026-11-03 (800 events scanned, 92 markets observed).
+- Offline editorial-agent interfaces, a shadow pipeline, structured claims,
+  conservative risk holds and synthetic verification cases. See [agents.md](agents.md).
 
 ## Planned production architecture
 
@@ -46,7 +48,8 @@ consequence of a measurable, well-guarded autonomous operating process.
    Actions cron runs on time.
 3. Historical price retrieval and quantitative baseline calibration.
 4. Source-citation evidence store with URLs, timestamps and retrieval hashes.
-5. Bounded agent stages with versioned prompts and structured outputs.
+5. Activate bounded agent adapters with versioned prompts and structured
+   outputs, using the already implemented offline shadow pipeline.
 6. Code-based verification of numeric claims and URLs, plus independent
    model-based checking of material factual claims.
 7. A publication state machine with idempotent operations and a kill switch.

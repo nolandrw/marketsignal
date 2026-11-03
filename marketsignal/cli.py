@@ -13,8 +13,9 @@ from pathlib import Path
 from .dashboard import render_dashboard
 from .daily import run_daily
 from .detection import detect_signals
+from .editorial import Candidate, EditorialPipeline
 from .gamma import GammaError, discover_markets
-from .models import Market
+from .models import Market, Signal
 from .postgres import PostgresStorage, open_storage
 from .storage import Storage
 
@@ -88,6 +89,29 @@ def demo(db_file: str, report_file: str) -> int:
     return 0
 
 
+def editorial_demo() -> int:
+    """Run a synthetic end-to-end editorial shadow pass without APIs or writes."""
+    now = Storage.bucket(int(time.time()))
+    market = Market(
+        market_id="synthetic-editorial-1", event_id="synthetic-event-1",
+        event_title="Fictional launch demonstration", event_slug="synthetic-example",
+        question="Will the fictional Atlas rocket launch by year-end?",
+        yes_token_id="synthetic-token", yes_price=0.54,
+        volume_24h=640_000, liquidity=210_000, end_date="",
+    )
+    signal = Signal(
+        market_id=market.market_id, observed_at=now, baseline_at=now - 86400,
+        window_hours=24, previous_price=0.35, current_price=0.54,
+        change_pp=19.0, score=83, volume_24h=640_000, liquidity=210_000,
+    )
+    # Risk classification is supplied only to illustrate a low-risk example;
+    # real markets default to unknown and require editorial review.
+    packet = EditorialPipeline().run(Candidate(market, signal, risk="low"))
+    print(json.dumps({"synthetic": True, "publication_enabled": False,
+                      "editorial_result": packet.to_dict()}, indent=2))
+    return 0 if packet.status == "shadow_ready" else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Auditable Polymarket movement monitoring")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -111,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     simulate = commands.add_parser("demo", help="Generate a clearly labeled synthetic detector demo")
     simulate.add_argument("--db", default="demo/demo.db")
     simulate.add_argument("--out", default="demo/index.html")
+    commands.add_parser("editorial-demo", help="Replay a synthetic agent workflow without API calls")
     arguments = parser.parse_args(argv)
     if arguments.command == "collect":
         if not 1 <= arguments.max_markets <= 1000 or not 1 <= arguments.max_pages <= 100:
@@ -121,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
                        arguments.retention_days)
     if arguments.command == "demo":
         return demo(arguments.db, arguments.out)
+    if arguments.command == "editorial-demo":
+        return editorial_demo()
     if arguments.command == "daily":
         if not 1 <= arguments.max_markets <= 1000 or not 1 <= arguments.max_pages <= 100:
             parser.error("--max-markets must be 1..1000 and --max-pages 1..100")
