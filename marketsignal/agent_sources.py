@@ -76,11 +76,16 @@ class PublicJSONTransport:
                     time.sleep(0.25 * (attempt + 1))
                     continue
                 raise SourceError(f"HTTP source failure {exc.code}") from None
-            except (URLError, TimeoutError, UnicodeError, json.JSONDecodeError):
+            except (URLError, TimeoutError):
                 if attempt < self.retries:
                     time.sleep(0.25 * (attempt + 1))
                     continue
-                raise SourceError("Source unavailable or malformed") from None
+                raise SourceError("Source network unavailable") from None
+            except (UnicodeError, json.JSONDecodeError):
+                if attempt < self.retries:
+                    time.sleep(0.25 * (attempt + 1))
+                    continue
+                raise SourceError("Source response is not valid JSON") from None
         raise SourceError("Source retry budget exhausted")
 
 

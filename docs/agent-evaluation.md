@@ -78,6 +78,26 @@ has been rated 100 by independent readers.
 - Added an explicit Evidence Investigator that never marks discovery metadata
   as verified primary evidence, and a safe reporter excluding raw social text.
 - Added both rubrics to CI, preserving the >=90 gate on every code change.
+- Live CI source smoke caught a failure invisible to synthetic tests: public
+  Polymarket history succeeded, Bluesky search returned HTTP 403 and GDELT
+  returned unusable data or a network error. These outcomes are reported as
+  degraded-source coverage; neither source is treated as factually verified.
+- A deployment review caught a malformed shadow-research CLI invocation. Fixed
+  the command and added dedicated workflow contract tests to prevent recurrence.
+
+## Live operational evidence (separate from synthetic scores)
+
+The optional `source-smoke` command probes providers in GitHub Actions without
+archiving content, search results, author identifiers or full request URLs. A
+source may be unavailable even when every fake-source test passes. The runner
+observed 49 historical Polymarket prices and an HTTP 403 for the unauthenticated
+Bluesky search endpoint. GDELT did not produce usable JSON on that probe.
+
+**Research availability is degraded and the production rubric remains
+unscored.** We do not create alternative identities, scrape around permission
+denials, or substitute fabricated social leads. Independently authorized
+connectors and a period of measured successful retrievals are prerequisites
+before promoting the research layer to reliable automated operation.
 
 ## Independent production-release rubric (NOT YET SCORED)
 

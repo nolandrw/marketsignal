@@ -78,7 +78,9 @@ jobs:
         run: python -m marketsignal evaluate-agents --cases 120 > shadow-evaluation.json
       - name: Investigate real signals with public read-only sources
         run: |
-          python -m marketsignal investigate-archive +            --archive-file "data/archive/$(date -u +%F).json" +            --max-candidates 3 > shadow-research.json
+          python -m marketsignal investigate-archive \
+            --archive-file "data/archive/$(date -u +%F).json" \
+            --max-candidates 3 > shadow-research.json
       - name: Keep only sanitized research metrics for seven days
         uses: actions/upload-artifact@v4
         with:
