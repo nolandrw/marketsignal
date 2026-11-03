@@ -17,7 +17,8 @@ from .agent_evals import evaluate_shadow
 from .agent_sources import BlueskySearch, GDELTSearch, PolymarketHistory, PublicJSONTransport
 from .editorial import Candidate, EditorialPipeline
 from .feature_demo import demo_feature
-from .feature_story import assign_reporting_from_archive
+from .feature_demo import fictional_feature_fixture
+from .feature_story import FeatureNewsroom, assign_reporting_from_archive
 from .context_discovery import discover_archive as discover_context_archive
 from .gamma import GammaError, discover_markets
 from .investigation import NarrativeScout
@@ -26,6 +27,16 @@ from .newsroom import replay_archive, safe_report
 from .postgres import PostgresStorage, open_storage
 from .source_smoke import probe_sources
 from .storage import Storage
+from .quantitative import pitches_from_archive
+from .historical import backfill_prices
+from .kalshi import KalshiDiscovery
+from .agent_sources import PolymarketComments
+from .learning import load_human_labels, train_challenger
+from .newsroom_control import (
+    StoryLedger, StoryState, TopicRubric, WorkflowController,
+    accept_structural_dossier, story_id,
+)
+from .oversight import OversightAgent, SyntheticAudiencePanel, grade_agents
 
 
 def collect(db_file: str, max_markets: int, max_pages: int,
@@ -120,6 +131,64 @@ def editorial_demo() -> int:
     return 0 if packet.status == "shadow_ready" else 1
 
 
+def newsroom_v3_demo() -> dict:
+    """Exercise every handoff with fictional evidence; stop at release gate."""
+    candidate, dossier = fictional_feature_fixture()
+    story = StoryState(story_id(candidate.market.market_id, candidate.signal.observed_at),
+                       candidate.market.market_id, candidate.signal.observed_at,
+                       quantitative_score=candidate.signal.score)
+    rubric = TopicRubric(5, 4, 4, 4, 4, 3,
+                         source_ids=tuple(doc.source_id for doc in dossier.documents))
+    story.topic_score = rubric.score
+    with StoryLedger(":memory:") as ledger:
+        def move(target: str, reason: str, agent: str) -> None:
+            WorkflowController.advance(story, target, reason=reason)
+            ledger.record(story, agent, reason)
+
+        ledger.record(story, "quantitative_triage", "synthetic_candidate")
+        for stage in ("triaged", "topic_review", "investigating", "verifying"):
+            move(stage, "fictional_workflow_test", "workflow_controller")
+        structural_issues = accept_structural_dossier(story, candidate, dossier)
+        if structural_issues:
+            raise AssertionError("Fictional dossier no longer satisfies structural gate")
+        move("chief_editor", "structural_checks_passed", "verifier")
+        story.editorial_assignment_ready = True
+        move("drafting", "length_and_angle_assigned", "chief_editor")
+        generated = FeatureNewsroom().run(candidate, dossier)
+        if generated.status != "shadow_draft_ready" or not generated.article:
+            raise AssertionError("Fictional writer or verifier regression")
+        move("editorial_review", "fictional_draft_ready", "writer")
+        story.editorial_review_passed = not generated.issue_codes
+        move("copy_editing", "structural_editor_acceptance", "chief_editor")
+        story.copy_review_passed = bool(generated.article.source_urls and
+                                        generated.article.headline == dossier.proposed_headline)
+        move("audience_review", "fictional_citation_layout", "copy_editor")
+        # The panel is explicitly a readability/provenance heuristic, not
+        # simulated people with meaningful taste or newsroom judgment.
+        draft = generated.article
+        audience = SyntheticAudiencePanel().examine(
+            draft.headline, " ".join(p.text for p in draft.paragraphs),
+            sum(bool(p.source_ids) or p.role == "market_context" for p in draft.paragraphs),
+            len(draft.paragraphs))
+        story.audience_review_recorded = True
+        move("release_review", "audience_diagnostic_recorded", "audience_panel")
+        # Structural provenance is not independent semantic fact checking;
+        # real release cannot advance to owner approval on this evidence.
+        move("held", "semantic_factcheck_not_available", "release_editor")
+        result = {"synthetic": True, "state": story.to_dict(),
+                  "topic_score": rubric.score, "owner_approval_required": True,
+                  "publication_enabled": False, "audit_chain_valid": ledger.verify_chain(story.story_id),
+                  "audit_handoffs": [entry["state"] for entry in ledger.events(story.story_id)],
+                  "fictional_article": {"headline": draft.headline,
+                                        "word_count": draft.approximate_word_count,
+                                        "paragraph_count": len(draft.paragraphs),
+                                        "source_count": len(dossier.documents),
+                                        "semantic_factcheck_passed": False},
+                  "audience_panel": audience,
+                  "oversight": [p.to_dict() for p in OversightAgent().assess(ledger.metrics())]}
+    return result
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Auditable Polymarket movement monitoring")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -168,7 +237,85 @@ def main(argv: list[str] | None = None) -> int:
         "source-smoke", help="Public-source connectivity, sanitized counts only"
     )
     smoke.add_argument("--archive-dir", default="data/archive")
+    pitches = commands.add_parser("quantitative-report", help="Read-only 1h/1d/7d/30d story pitches")
+    pitches.add_argument("--archive-file", required=True)
+    pitches.add_argument("--top", type=int, default=20)
+    historical = commands.add_parser("backfill-history", help="Bounded public Polymarket history (manual)")
+    historical.add_argument("--archive-file", required=True)
+    historical.add_argument("--out-dir", default="data/history")
+    historical.add_argument("--max-markets", type=int, default=3)
+    historical.add_argument("--days", type=int, default=30)
+    kalshi = commands.add_parser("kalshi-sample", help="Read-only Kalshi adapter smoke probe")
+    kalshi.add_argument("--max-pages", type=int, default=1)
+    comments = commands.add_parser("comment-pulse", help="Unverified Polymarket comment activity only")
+    comments.add_argument("--archive-file", required=True)
+    comments.add_argument("--max-events", type=int, default=2)
+    commands.add_parser("newsroom-v3-demo", help="Synthetic bounded workflow; no release")
+    train = commands.add_parser("train-ranker", help="Train inactive ML challenger on verified human labels")
+    train.add_argument("--labels", required=True)
+    train.add_argument("--model-out", default="data/private/news-ranker-challenger.json")
+    ledger = commands.add_parser("newsroom-audit", help="Summarize private quality ledger")
+    ledger.add_argument("--db", default="data/private/story-ledger.db")
     arguments = parser.parse_args(argv)
+    if arguments.command == "quantitative-report":
+        if not 1 <= arguments.top <= 100:
+            parser.error("--top must be 1..100")
+        selected = pitches_from_archive(arguments.archive_file)[:arguments.top]
+        print(json.dumps({"shadow_only": True, "pitches": [p.to_dict() for p in selected]}, indent=2))
+        return 0
+    if arguments.command == "backfill-history":
+        print(json.dumps(backfill_prices(arguments.archive_file, arguments.out_dir,
+                                         max_markets=arguments.max_markets,
+                                         lookback_days=arguments.days), indent=2))
+        return 0
+    if arguments.command == "kalshi-sample":
+        samples = KalshiDiscovery(PublicJSONTransport()).sample(max_pages=arguments.max_pages)
+        print(json.dumps({"venue": "kalshi", "status": "experimental_discovery_only",
+                          "quote_count": len(samples), "market_volume_unit": "contracts",
+                          "merged_into_daily_scoring": False}, indent=2))
+        return 0
+    if arguments.command == "comment-pulse":
+        if not 1 <= arguments.max_events <= 3:
+            parser.error("--max-events must be 1..3")
+        record = json.loads(Path(arguments.archive_file).read_text(encoding="utf-8"))
+        seen = set()
+        client = PolymarketComments(PublicJSONTransport())
+        pulses = []
+        for raw in record.get("markets", []):
+            market = Market(**raw)
+            if market.event_id in seen or market.venue != "polymarket":
+                continue
+            seen.add(market.event_id)
+            pulse = client.pulse(market.event_id, market.event_slug, int(record["observed_at"]))
+            pulses.append({"event_id": pulse.event_id, "recent_comments_24h": pulse.recent_comments_24h,
+                           "unique_commenters": pulse.distinct_recent_accounts,
+                           "unverified_leads": len(pulse.theory_leads),
+                           "evidence_grade": pulse.evidence_grade})
+            if len(pulses) >= arguments.max_events:
+                break
+        print(json.dumps({"shadow_only": True, "pulses": pulses}, indent=2))
+        return 0
+    if arguments.command == "newsroom-v3-demo":
+        print(json.dumps(newsroom_v3_demo(), indent=2))
+        return 0
+    if arguments.command == "train-ranker":
+        model = train_challenger(load_human_labels(arguments.labels))
+        if "site" in Path(arguments.model_out).parts or "archive" in Path(arguments.model_out).parts:
+            parser.error("Do not publish training artifacts in the website or market archive")
+        model.save(arguments.model_out)
+        print(json.dumps({"status": "challenger_only", "metrics": model.holdout_metrics,
+                          "training_examples": model.training_examples,
+                          "model_file": arguments.model_out}, indent=2))
+        return 0
+    if arguments.command == "newsroom-audit":
+        if not Path(arguments.db).exists():
+            print(json.dumps({"status": "no_private_ledger_yet", "grades": {}}, indent=2))
+            return 0
+        with StoryLedger(arguments.db) as audit:
+            metrics = audit.metrics()
+            print(json.dumps({"metrics": metrics, "grades": grade_agents(metrics),
+                              "oversight": [p.to_dict() for p in OversightAgent().assess(metrics)]}, indent=2))
+        return 0
     if arguments.command == "collect":
         if not 1 <= arguments.max_markets <= 1000 or not 1 <= arguments.max_pages <= 100:
             parser.error("--max-markets must be 1..1000 and --max-pages 1..100")
