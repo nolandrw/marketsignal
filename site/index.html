@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MarketSignal | Operations</title><style>
+:root{--ink:#17242b;--muted:#6b7880;--line:#dce3e5;--teal:#0b615d;--light:#f7f9f9;--up:#16705e;--down:#b8504a}
+*{box-sizing:border-box}body{margin:0;background:#fff;color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.layout{max-width:1160px;margin:0 auto;padding:0 26px 64px}header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:28px 0;border-bottom:1px solid var(--line)}
+.brand{font:700 22px/1 Georgia,serif;letter-spacing:-.5px}.brand span{color:var(--teal)}.pill{font-size:12px;color:var(--teal);background:#eaf5f0;border-radius:22px;padding:7px 12px}
+h1{font:normal 48px/1.1 Georgia,serif;letter-spacing:-1px;margin:44px 0 10px}.lead{font-size:16px;color:var(--muted);margin:0 0 30px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:26px 0 40px}.metric{background:var(--light);border:1px solid var(--line);padding:24px;border-radius:10px}
+.metric strong{display:block;font-size:30px;font-variant-numeric:tabular-nums;letter-spacing:-1px}.metric span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+section{margin-top:39px}.sectionhead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:0}
+h2{font:normal 27px/1.2 Georgia,serif;margin:0}.aside{color:var(--muted);font-size:12px}table{width:100%;border-collapse:collapse;text-align:left}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:14px 11px}
+td{border-top:1px solid #edf0f0;padding:15px 11px;vertical-align:middle}tr:hover td{background:#fbfcfc}td:first-child,th:first-child{padding-left:0}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.up{color:var(--up);font-weight:700}.down{color:var(--down);font-weight:700}
+a{color:var(--teal);text-decoration:none}a:hover{text-decoration:underline}.minor{font-size:11px;color:var(--muted);margin-top:4px}
+.empty{text-align:center;color:var(--muted);padding:32px}.alert{border-left:3px solid #b78a4d;background:#fbf8f0;color:#68543c;padding:14px 17px;font-size:13px;margin-bottom:20px}
+.status{font-size:12px;text-transform:uppercase;font-weight:700}.ok{color:var(--up)}.bad{color:var(--down)}
+footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between}
+@media(max-width:780px){.metrics{grid-template-columns:repeat(2,1fr)}.layout{padding:0 15px 45px}h1{font-size:35px}.tablewrap{overflow-x:auto}table{min-width:700px}}
+</style></head><body><div class="layout">
+<header><div class="brand">Market<span>Signal</span><div class="minor">Autonomous intelligence · Engineering preview</div></div><span class="pill">Daily market briefing</span></header>
+<main><h1>Market intelligence, measured.</h1><p class="lead">An auditable pipeline for detecting consequential prediction-market movements.</p>
+<div class="alert">Market outcome prices are trading quotes, not verified real-world probabilities. No cause of a movement is asserted here. This is a monitoring prototype, not financial advice.</div><div class="metrics">
+<div class="metric"><strong>92</strong><span>Markets discovered</span></div>
+<div class="metric"><strong>92</strong><span>Snapshots persisted</span></div>
+<div class="metric"><strong>0</strong><span>Qualified signals</span></div>
+<div class="metric"><strong>0</strong><span>Recorded failures</span></div></div>
+<section><div class="sectionhead"><h2>Significant movements</h2><span class="aside">Daily observations · elapsed interval shown</span></div>
+<div class="tablewrap"><table><thead><tr><th>Contract</th><th class="num">Outcome price</th><th class="num">Change</th><th class="num">Priority</th><th class="num">24h Volume</th></tr></thead>
+<tbody><tr><td colspan="5" class="empty">No movements passed the daily threshold in this snapshot. The first day establishes the baseline.</td></tr></tbody></table></div></section>
+<section><div class="sectionhead"><h2>Watchlist</h2><span class="aside">Latest stored quotes</span></div>
+<div class="tablewrap"><table><thead><tr><th>Contract</th><th class="num">Yes price</th><th class="num">24h volume</th><th class="num">Liquidity</th></tr></thead>
+<tbody><tr><td>2026 Balance of Power: R Senate, R House</td><td class="num">5.5%</td><td class="num">$5,282,399</td><td class="num">$2,185,604</td></tr>
+<tr><td>Will the Democratic Party control the House after the 2026 Midterm elections?</td><td class="num">94.5%</td><td class="num">$3,924,212</td><td class="num">$5,692,324</td></tr>
+<tr><td>2026 Balance of Power: D Senate, D House</td><td class="num">76.5%</td><td class="num">$2,406,283</td><td class="num">$1,352,854</td></tr>
+<tr><td>Will the Republican Party control the House after the 2026 Midterm elections?</td><td class="num">5.5%</td><td class="num">$1,434,058</td><td class="num">$3,599,070</td></tr>
+<tr><td>Will the Republicans win the Texas Senate race in 2026?</td><td class="num">25.5%</td><td class="num">$1,395,472</td><td class="num">$1,301,346</td></tr>
+<tr><td>Will the Republican Party control the Senate after the 2026 Midterm elections?</td><td class="num">23.5%</td><td class="num">$1,317,296</td><td class="num">$910,830</td></tr>
+<tr><td>Will the Democratic Party control the Senate after the 2026 Midterm elections?</td><td class="num">77.5%</td><td class="num">$1,182,542</td><td class="num">$1,139,014</td></tr>
+<tr><td>Will the Democrats win the Michigan Senate race in 2026?</td><td class="num">80.5%</td><td class="num">$1,026,991</td><td class="num">$656,781</td></tr>
+<tr><td>Will the Democrats win the Texas Senate race in 2026?</td><td class="num">74.5%</td><td class="num">$906,897</td><td class="num">$1,169,837</td></tr>
+<tr><td>Will the Republicans win the Michigan Senate race in 2026?</td><td class="num">19.5%</td><td class="num">$719,931</td><td class="num">$680,647</td></tr>
+<tr><td>US x Iran ceasefire continues through November 3?</td><td class="num">3.5%</td><td class="num">$449,343</td><td class="num">$65,473</td></tr>
+<tr><td>Will the U.S. invade Iran before 2027?</td><td class="num">17.5%</td><td class="num">$424,699</td><td class="num">$271,412</td></tr>
+<tr><td>Will the Republicans win the Texas governor race in 2026?</td><td class="num">62.1%</td><td class="num">$411,715</td><td class="num">$314,781</td></tr>
+<tr><td>2026 Balance of Power: R Senate, D House</td><td class="num">19.5%</td><td class="num">$377,071</td><td class="num">$913,926</td></tr>
+<tr><td>Will the Republican Party hold 47 or fewer Senate seats after the 2026 midterm elections?</td><td class="num">55.5%</td><td class="num">$365,138</td><td class="num">$714,894</td></tr>
+<tr><td>Will the Republicans win the Florida governor race in 2026?</td><td class="num">63.5%</td><td class="num">$267,163</td><td class="num">$262,241</td></tr>
+<tr><td>Will the Republican Party hold exactly 49 Senate seats after the 2026 midterm elections?</td><td class="num">9.5%</td><td class="num">$265,162</td><td class="num">$845,358</td></tr>
+<tr><td>Will the Democrats win the Texas governor race in 2026?</td><td class="num">37.5%</td><td class="num">$254,913</td><td class="num">$300,612</td></tr>
+<tr><td>Will the Republican Party hold exactly 48 Senate seats after the 2026 midterm elections?</td><td class="num">13.5%</td><td class="num">$249,575</td><td class="num">$1,030,941</td></tr>
+<tr><td>Will the Republicans win the Maine Senate race in 2026?</td><td class="num">26.5%</td><td class="num">$245,362</td><td class="num">$412,830</td></tr>
+<tr><td>Will the Fed increase interest rates by 25 bps after the December 2026 meeting?</td><td class="num">72.5%</td><td class="num">$223,933</td><td class="num">$452,869</td></tr>
+<tr><td>Putin out as President of Russia by December 31, 2026?</td><td class="num">1.9%</td><td class="num">$207,318</td><td class="num">$500,864</td></tr>
+<tr><td>US announces end of Iranian blockade by December 31, 2026?</td><td class="num">39.8%</td><td class="num">$201,621</td><td class="num">$141,060</td></tr>
+<tr><td>Will the Democrats win the Minnesota Senate race in 2026?</td><td class="num">91.5%</td><td class="num">$187,080</td><td class="num">$106,042</td></tr>
+<tr><td>Will Steve Hilton win the California Governor Election in 2026?</td><td class="num">1.9%</td><td class="num">$178,255</td><td class="num">$634,433</td></tr>
+<tr><td>Will the Democrats win the Maine Senate race in 2026?</td><td class="num">73.5%</td><td class="num">$176,082</td><td class="num">$435,905</td></tr>
+<tr><td>Will the Fed increase interest rates by 50+ bps after the December 2026 meeting?</td><td class="num">1.9%</td><td class="num">$174,250</td><td class="num">$247,562</td></tr>
+<tr><td>Will the Democrats win the Ohio Senate race in 2026?</td><td class="num">71.5%</td><td class="num">$173,111</td><td class="num">$388,802</td></tr>
+<tr><td>US x Iran ceasefire continues through November 5?</td><td class="num">5.2%</td><td class="num">$168,098</td><td class="num">$37,327</td></tr>
+<tr><td>US announces end of Iranian blockade by November 15, 2026?</td><td class="num">15.5%</td><td class="num">$153,438</td><td class="num">$54,306</td></tr></tbody></table></div></section>
+<section><div class="sectionhead"><h2>Pipeline health</h2><span class="aside">Latest run: Nov 03, 2026 · 08:00 UTC</span></div>
+<div class="tablewrap"><table><thead><tr><th>Run time</th><th>Status</th><th class="num">Saved</th><th class="num">New signals</th></tr></thead>
+<tbody><tr><td>Nov 03, 2026 · 08:00 UTC</td><td><span class="status ok">ok</span></td><td class="num">92</td><td class="num">0</td></tr></tbody></table></div></section>
+</main><footer><span>Daily data-only proof of concept · No AI-authored claims</span><span>Generated Nov 03, 2026 · 08:14 UTC</span></footer></div></body></html>

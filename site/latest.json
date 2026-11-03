@@ -1,0 +1,10 @@
+{
+  "date": "2026-11-03",
+  "events_scanned": 800,
+  "markets_observed": 92,
+  "new_signals": 0,
+  "observed_at": 1793692800,
+  "reused_existing_snapshot": false,
+  "schema_version": 1,
+  "signals": []
+}
