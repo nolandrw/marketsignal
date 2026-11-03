@@ -19,6 +19,10 @@ wallet, LLM API call or newsletter subscription.
 5. The built-in GitHub workflow identity commits the new date and report to
    the public repository. No personal access token is necessary.
 6. If Pages is enabled, the same workflow uploads and deploys the site.
+7. A separate shadow job replays 120 deterministic agent golden cases and,
+   if real signals exist, performs bounded read-only Polymarket/Bluesky/GDELT
+   discovery. Only sanitized metrics go to a seven-day Actions artifact.
+   This job has no page-deployment permissions and never publishes articles.
 
 The first run establishes a baseline; signals ordinarily begin on the next
 day. A rerun on the same UTC date uses the existing record and avoids fetching

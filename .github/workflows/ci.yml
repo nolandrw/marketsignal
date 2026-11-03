@@ -24,5 +24,7 @@ jobs:
           bash -n scripts/enable_schedule_gcp.sh
       - name: Exercise synthetic replay
         run: python -m marketsignal demo --db demo/demo.db --out demo/index.html
+      - name: Enforce offline agent process and result quality gates
+        run: python -m marketsignal evaluate-agents --cases 120
       - name: Build production container
         run: docker build --tag marketsignal:ci .

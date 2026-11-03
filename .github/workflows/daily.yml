@@ -58,3 +58,32 @@ jobs:
       - name: Deploy static site
         id: deployment
         uses: actions/deploy-pages@v4
+
+  shadow:
+    name: Research-agent shadow evaluation (not published)
+    needs: collect
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run synthetic process and result rubrics
+        run: python -m marketsignal evaluate-agents --cases 120 > shadow-evaluation.json
+      - name: Investigate real signals with public read-only sources
+        run: |
+          python -m marketsignal investigate-archive +            --archive-file "data/archive/$(date -u +%F).json" +            --max-candidates 3 > shadow-research.json
+      - name: Keep only sanitized research metrics for seven days
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketsignal-shadow-results
+          path: |
+            shadow-evaluation.json
+            shadow-research.json
+          retention-days: 7

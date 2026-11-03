@@ -28,10 +28,17 @@ retention, stale-run recovery and safeguards around production credentials.
 - [x] Unknown/high-risk, causal-claim and attributed-social-speculation holds;
   no publisher attached
 - [x] Unit cases for bad math, evidence provenance, agent failure and retry ID
+- [x] Fixed public-source adapters with timeouts, bounded responses and
+  no arbitrary URL fetches; untrusted social content excluded from public output
+- [x] Reproducible 120-case synthetic process/result scoring in CI
+- [x] Explicit versioned instructions, handoffs and an investigator that
+  cannot self-certify source discovery as a verified event
 - [ ] Actual primary-source retrieval and rights-compliant evidence archive
 - [ ] Social-source coverage, independence, narrative-amplification and
   source-deletion compliance tests before any public speculative context
 - [ ] Model writer, independent verifier and versioned prompt registry
+- [ ] Live provider contract tests and performance monitoring (end-to-end
+  connectivity cannot be established in offline synthetic evaluations)
 - [ ] Calibrated evaluation of models and story usefulness on historical cases
 - [ ] Idempotent publication state machine and operational kill switch
 

@@ -13,9 +13,13 @@ from pathlib import Path
 from .dashboard import render_dashboard
 from .daily import run_daily
 from .detection import detect_signals
+from .agent_evals import evaluate_shadow
+from .agent_sources import BlueskySearch, GDELTSearch, PolymarketHistory, PublicJSONTransport
 from .editorial import Candidate, EditorialPipeline
 from .gamma import GammaError, discover_markets
+from .investigation import NarrativeScout
 from .models import Market, Signal
+from .newsroom import replay_archive, safe_report
 from .postgres import PostgresStorage, open_storage
 from .storage import Storage
 
@@ -136,6 +140,15 @@ def main(argv: list[str] | None = None) -> int:
     simulate.add_argument("--db", default="demo/demo.db")
     simulate.add_argument("--out", default="demo/index.html")
     commands.add_parser("editorial-demo", help="Replay a synthetic agent workflow without API calls")
+    investigate = commands.add_parser(
+        "investigate-archive", help="Shadow-only bounded source research for archived signals"
+    )
+    investigate.add_argument("--archive-file", required=True)
+    investigate.add_argument("--max-candidates", type=int, default=3)
+    evaluate = commands.add_parser(
+        "evaluate-agents", help="Run deterministic synthetic agent process/result rubrics"
+    )
+    evaluate.add_argument("--cases", type=int, default=120)
     arguments = parser.parse_args(argv)
     if arguments.command == "collect":
         if not 1 <= arguments.max_markets <= 1000 or not 1 <= arguments.max_pages <= 100:
@@ -148,6 +161,18 @@ def main(argv: list[str] | None = None) -> int:
         return demo(arguments.db, arguments.out)
     if arguments.command == "editorial-demo":
         return editorial_demo()
+    if arguments.command == "evaluate-agents":
+        result = evaluate_shadow(arguments.cases)
+        print(json.dumps(result, indent=2))
+        return 0 if result["passes_offline_thresholds"] else 1
+    if arguments.command == "investigate-archive":
+        transport = PublicJSONTransport(timeout=8, retries=1)
+        scout = NarrativeScout(PolymarketHistory(transport),
+                               BlueskySearch(transport), GDELTSearch(transport))
+        results = replay_archive(arguments.archive_file, scout,
+                                 max_candidates=arguments.max_candidates)
+        print(json.dumps(safe_report(results), indent=2))
+        return 0
     if arguments.command == "daily":
         if not 1 <= arguments.max_markets <= 1000 or not 1 <= arguments.max_pages <= 100:
             parser.error("--max-markets must be 1..1000 and --max-pages 1..100")

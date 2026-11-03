@@ -1,8 +1,9 @@
 # Editorial agents — architecture v0.1 (shadow mode)
 
-**Status, 2026-11-03:** code contracts and an executable synthetic replay exist;
-there are no LLM calls, paid API dependencies, external article fetches, or
-automatic article publication. The data-only daily site continues separately.
+**Status, 2026-11-03:** typed contracts, bounded free-source *discovery*
+adapters, shadow investigator, synthetic evaluation and scheduled shadow
+metrics exist. There are no LLM calls, paid APIs, independent full-text fact
+checks or automatic article publication. The data-only site remains separate.
 
 ## Operating principle
 
@@ -23,10 +24,11 @@ flowchart TD
 ```
 
 For the current free architecture, a deterministic template writer stands in
-for model-based text generation and a market-record adapter stands in for
-external research. The orchestration and evaluation boundaries stay the same
-when paid providers are added. We intentionally do **not** need an LLM
-framework just to execute a five-step state machine.
+for model-based text generation. Public-source discovery is implemented, but
+the separate Evidence Investigator **refuses to certify an underlying claim**
+from search results alone. The contracts and gates remain when paid providers
+are added. We intentionally do not need an LLM framework just to execute
+a bounded, auditable state machine.
 
 ## Decision rights and contracts
 
@@ -209,3 +211,5 @@ Before any unattended explanatory article can be released:
 
 See [quality gates](quality-gates.md) for the release scorecard. Neither a
 passing unit suite nor a live data-only dashboard satisfies editorial launch.
+See also the [versioned instructions](agent-instructions-v1.md) and the
+[measured synthetic and unmeasured production rubrics](agent-evaluation.md).

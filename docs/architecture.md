@@ -39,6 +39,10 @@ consequence of a measurable, well-guarded autonomous operating process.
   deployment succeeded on 2026-11-03 (800 events scanned, 92 markets observed).
 - Offline editorial-agent interfaces, a shadow pipeline, structured claims,
   conservative risk holds and synthetic verification cases. See [agents.md](agents.md).
+- Bounded public-source adapters (Polymarket intraday history, Bluesky,
+  GDELT), independent investigation handoff, versioned agent instructions and
+  a synthetic quality-gated shadow run. Model inference and publication remain
+  disabled.
 
 ## Planned production architecture
 
