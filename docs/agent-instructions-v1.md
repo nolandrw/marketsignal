@@ -52,10 +52,11 @@ do not decide that these theories are true.
 article discovery. No arbitrary webpage execution or unrestricted search
 loops. Reddit needs approval; X remains a disabled paid adapter.
 
-**Observed connectivity limit:** On the first live CI probe, Polymarket
-history worked, Bluesky public search returned HTTP 403, and GDELT failed to
-return usable data. These are optional, degradable lead sources, NOT dependable
-production inputs; source denials cannot be worked around by scraping.
+**Observed connectivity limit:** Live CI confirmed Polymarket history and a
+GDELT result after raising its bounded timeout to 20 seconds. Unauthenticated
+Bluesky public search consistently returned HTTP 403. These are optional lead
+sources, NOT verified primary evidence or a demonstrated reliable production
+feed; source denials cannot be worked around by scraping.
 
 **Budget:** 3 source types, max 20 results per source, max 3 hypotheses,
 one retry and at most 8-second timeout for CLOB/Bluesky reads; GDELT has a

@@ -85,11 +85,12 @@ suppression window per market.
   **discovery** exists, but discovery is not fact-checking.
 - Cross-market clustering, professional licensing review, or fully unattended operation.
 
-The first CI live-source probe confirmed Polymarket history was accessible,
-but unauthenticated Bluesky search returned **HTTP 403** and GDELT discovery
-returned no usable response. Those adapters are best-effort and currently
-**degraded**; successful fake-source tests are not evidence of live coverage.
-The system will hold unsupported story claims rather than scrape around a
+CI live-source probes confirmed Polymarket history (49 observations) and,
+after increasing the bounded GDELT timeout to 20 seconds, GDELT article
+discovery (one article lead). Unauthenticated Bluesky search still returns
+**HTTP 403**, so social discovery is currently **degraded**. One successful
+news query is not evidence of sustained reliability or verified reporting.
+The system holds unsupported story claims rather than scrape around a
 provider's denied access or invent a catalyst.
 
 These omissions are intentional. The next milestone requires a **real seven-day

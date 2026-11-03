@@ -80,8 +80,9 @@ has been rated 100 by independent readers.
 - Added both rubrics to CI, preserving the >=90 gate on every code change.
 - Live CI source smoke caught a failure invisible to synthetic tests: public
   Polymarket history succeeded, Bluesky search returned HTTP 403 and GDELT
-  returned unusable data or a network error. These outcomes are reported as
-  degraded-source coverage; neither source is treated as factually verified.
+  initially timed out. A bounded 20-second GDELT retry configuration resolved
+  the timeout on the next CI run; Bluesky remains access-restricted. Neither
+  retrieved article nor social metadata is treated as factually verified.
 - A deployment review caught a malformed shadow-research CLI invocation. Fixed
   the command and added dedicated workflow contract tests to prevent recurrence.
 
@@ -89,11 +90,13 @@ has been rated 100 by independent readers.
 
 The optional `source-smoke` command probes providers in GitHub Actions without
 archiving content, search results, author identifiers or full request URLs. A
-source may be unavailable even when every fake-source test passes. The runner
-observed 49 historical Polymarket prices and an HTTP 403 for the unauthenticated
-Bluesky search endpoint. GDELT did not produce usable JSON on that probe.
+source may be unavailable even when every fake-source test passes. In the
+latest live probe, the runner observed 49 historical Polymarket prices,
+one GDELT article-discovery result and HTTP 403 for the unauthenticated
+Bluesky search endpoint. This is a connectivity sample, not a statistical
+reliability estimate or independent content-verification sample.
 
-**Research availability is degraded and the production rubric remains
+**Social research availability is degraded and the production rubric remains
 unscored.** We do not create alternative identities, scrape around permission
 denials, or substitute fabricated social leads. Independently authorized
 connectors and a period of measured successful retrievals are prerequisites
