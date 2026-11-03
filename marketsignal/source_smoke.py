@@ -6,7 +6,9 @@ import json
 import time
 from pathlib import Path
 
-from .agent_sources import BlueskySearch, GDELTSearch, PolymarketHistory, PublicJSONTransport
+from .agent_sources import (
+    BlueskySearch, GDELTSearch, PolymarketHistory, PublicJSONTransport, SourceError,
+)
 
 
 def probe_sources(archive_dir: str | Path, *, now: int | None = None,
@@ -43,6 +45,10 @@ def probe_sources(archive_dir: str | Path, *, now: int | None = None,
         try:
             hits = call()
             probes[name] = {"status": "ok", "observations": len(hits)}
+        except SourceError as exc:
+            # SourceError contains only deliberately sanitized diagnostics:
+            # status code or a fixed failure class, never URL or response body.
+            probes[name] = {"status": "unavailable", "reason": str(exc)}
         except Exception as exc:
             # Never print provider exception strings, request URLs or user data.
             probes[name] = {"status": "unavailable", "error_class": type(exc).__name__}
