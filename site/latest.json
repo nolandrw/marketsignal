@@ -4,7 +4,7 @@
   "markets_observed": 92,
   "new_signals": 0,
   "observed_at": 1793692800,
-  "reused_existing_snapshot": false,
+  "reused_existing_snapshot": true,
   "schema_version": 1,
   "signals": []
 }
