@@ -34,6 +34,7 @@ python -m marketsignal daily --archive-dir data/archive --out site/index.html
 python -m marketsignal editorial-demo
 python -m marketsignal feature-demo
 python -m marketsignal assign-context --archive-file data/archive/2026-11-03.json
+python -m marketsignal discover-context --archive-file data/archive/2026-11-03.json
 python -m marketsignal evaluate-agents --cases 120
 python -m marketsignal source-smoke --archive-dir data/archive
 python -m marketsignal investigate-archive --archive-file data/archive/2026-11-03.json
@@ -84,6 +85,9 @@ suppression window per market.
   earlier expectations, societal stakes, attributed alternative explanations,
   editor-determined length, paragraph citation IDs and an independent shadow
   verification gate. The CLI demonstration is deliberately fictional.
+- Bounded historical-context discovery across prior, recent and broader
+  reporting windows (GDELT metadata only), triggered in daily shadow runs
+  and recorded as sanitized counts, with no claim that a news hit is verified.
 - Optional PostgreSQL storage with one-time schema setup, 30-day retention
   (preserving signal evidence), stale-run recovery and a CLI health probe.
 - Non-root container image, explicit Secret Manager integration and opt-in

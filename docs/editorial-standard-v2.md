@@ -8,6 +8,10 @@ The daily shadow job now also generates genuine-market reporting assignments
 with `python -m marketsignal assign-context --archive-file PATH`; without
 direct source captures these correctly remain `needs_context`. It does not
 turn GDELT headlines into invented factual dossiers.
+An additional bounded `discover-context` job searches GDELT over three
+separate windows (prior reporting, the immediate development, and a wider
+90-day background interval). This obtains dated leads for later source
+verification, but still does not retrieve full text or prove past sentiment.
 
 ## The editorial proposition
 
@@ -180,7 +184,8 @@ unsupported material allegations remain hard gates, regardless of score.
 
 ## What has been built vs. what still needs activation
 
-**Implemented now:** typed reporting assignments; evidence packages with
+**Implemented now:** typed reporting assignments; three-window historic/news
+discovery with bounded calls; evidence packages with
 captured text and SHA-256 digests; independent-origin checks; quote-to-source
 matching; prior-context and societal-stakes requirements; explicit hypothesis
 uncertainty; editor-driven length; original story-mode headline rules;

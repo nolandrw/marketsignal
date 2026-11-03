@@ -18,6 +18,7 @@ from .agent_sources import BlueskySearch, GDELTSearch, PolymarketHistory, Public
 from .editorial import Candidate, EditorialPipeline
 from .feature_demo import demo_feature
 from .feature_story import assign_reporting_from_archive
+from .context_discovery import discover_archive as discover_context_archive
 from .gamma import GammaError, discover_markets
 from .investigation import NarrativeScout
 from .models import Market, Signal
@@ -154,6 +155,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     assignments.add_argument("--archive-file", required=True)
     assignments.add_argument("--max-candidates", type=int, default=3)
+    context = commands.add_parser(
+        "discover-context", help="Read-only background and prior reporting discovery (shadow only)"
+    )
+    context.add_argument("--archive-file", required=True)
+    context.add_argument("--max-candidates", type=int, default=2)
     evaluate = commands.add_parser(
         "evaluate-agents", help="Run deterministic synthetic agent process/result rubrics"
     )
@@ -197,6 +203,12 @@ def main(argv: list[str] | None = None) -> int:
     if arguments.command == "assign-context":
         print(json.dumps(assign_reporting_from_archive(
             arguments.archive_file, max_candidates=arguments.max_candidates
+        ), indent=2))
+        return 0
+    if arguments.command == "discover-context":
+        news = GDELTSearch(PublicJSONTransport(timeout=20, retries=0))
+        print(json.dumps(discover_context_archive(
+            arguments.archive_file, news, max_candidates=arguments.max_candidates
         ), indent=2))
         return 0
     if arguments.command == "daily":
