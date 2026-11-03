@@ -13,5 +13,7 @@ dist/
 .env.*
 data/*.db
 data/*.db-*
+data/private/
+data/history/
 .coverage
 .DS_Store
