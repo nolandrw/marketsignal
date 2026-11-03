@@ -15,6 +15,10 @@ def probe_sources(archive_dir: str | Path, *, now: int | None = None,
                   transport=None) -> dict:
     now = int(time.time()) if now is None else now
     client = transport or PublicJSONTransport(timeout=8, retries=0)
+    # GDELT's free DOC endpoint sometimes takes much longer than the
+    # lightweight CLOB and Bluesky requests. A separate bounded timeout
+    # prevents that slowness from penalizing the faster probes.
+    gdelt_client = transport or PublicJSONTransport(timeout=20, retries=0)
     probes = {}
     archive = Path(archive_dir)
     files = sorted(archive.glob("????-??-??.json"))
@@ -33,7 +37,7 @@ def probe_sources(archive_dir: str | Path, *, now: int | None = None,
             pass
     attempts = [
         ("bluesky", lambda: BlueskySearch(client).search("polymarket", now - 3600, now, 2)),
-        ("gdelt", lambda: GDELTSearch(client).search("polymarket", now - 86400, now, 2)),
+        ("gdelt", lambda: GDELTSearch(gdelt_client).search("polymarket", now - 86400, now, 2)),
     ]
     if token_id:
         attempts.insert(0, ("polymarket_history",

@@ -85,6 +85,13 @@ suppression window per market.
   **discovery** exists, but discovery is not fact-checking.
 - Cross-market clustering, professional licensing review, or fully unattended operation.
 
+The first CI live-source probe confirmed Polymarket history was accessible,
+but unauthenticated Bluesky search returned **HTTP 403** and GDELT discovery
+returned no usable response. Those adapters are best-effort and currently
+**degraded**; successful fake-source tests are not evidence of live coverage.
+The system will hold unsupported story claims rather than scrape around a
+provider's denied access or invent a catalyst.
+
 These omissions are intentional. The next milestone requires a **real seven-day
 scheduled-collector trial**, historical price backfill, an evaluation dataset,
 and model-powered, independently verified shadow research/writing. No public
@@ -120,12 +127,19 @@ Gamma API -> normalized Yes/No markets -> immutable SQLite/PostgreSQL snapshots
           -> read-only HTML operations report
 ```
 
-The future newsroom connects downstream of the signal table:
+The implemented **shadow newsroom** connects downstream of archived signals:
 
 ```text
-signals -> research agent -> writer agent -> independent verifier
-        -> numerical/source checks -> policy gate -> website publisher
+archived signal -> quantitative triage -> narrative scout (optional public leads)
+  -> evidence investigator (discovery ≠ verification)
+  -> permissioned movement-only writer -> verifier -> editor (hold/shadow)
+  -> sanitized private CI artifact
 ```
+
+The public publisher is deliberately disconnected; only the independently
+scheduled data-only dashboard is deployed. The next research phase needs
+authorized reliable source access, real-content fact checking and real-world
+human-rated evaluations before an autonomous narrative publisher is safe.
 
 See [agent instructions](docs/agent-instructions-v1.md),
 [agent evaluation](docs/agent-evaluation.md),

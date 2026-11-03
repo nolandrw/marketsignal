@@ -58,7 +58,8 @@ return usable data. These are optional, degradable lead sources, NOT dependable
 production inputs; source denials cannot be worked around by scraping.
 
 **Budget:** 3 source types, max 20 results per source, max 3 hypotheses,
-one retry and at most 8-second timeout per read. Prefer the approximate
+one retry and at most 8-second timeout for CLOB/Bluesky reads; GDELT has a
+single 20-second bounded read because of observed free-API latency. Prefer the approximate
 intraday movement interval, with explicit fallback to the daily interval.
 
 **Future model instruction:**

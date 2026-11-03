@@ -175,8 +175,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if arguments.command == "investigate-archive":
         transport = PublicJSONTransport(timeout=8, retries=1)
+        slow_news_transport = PublicJSONTransport(timeout=20, retries=0)
         scout = NarrativeScout(PolymarketHistory(transport),
-                               BlueskySearch(transport), GDELTSearch(transport))
+                               BlueskySearch(transport), GDELTSearch(slow_news_transport))
         results = replay_archive(arguments.archive_file, scout,
                                  max_candidates=arguments.max_candidates)
         print(json.dumps(safe_report(results), indent=2))
