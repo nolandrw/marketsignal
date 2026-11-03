@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "marketsignal"
+version = "0.2.0"
+description = "Auditable prediction-market signal detection and a foundation for an autonomous newsroom"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.2,<4"]
+
+[project.scripts]
+marketsignal = "marketsignal.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["marketsignal*"]

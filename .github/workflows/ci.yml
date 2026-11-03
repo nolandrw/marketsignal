@@ -1,0 +1,28 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Check code and deployment script syntax
+        run: |
+          python -m compileall -q marketsignal
+          bash -n scripts/deploy_gcp.sh
+          bash -n scripts/enable_schedule_gcp.sh
+      - name: Exercise synthetic replay
+        run: python -m marketsignal demo --db demo/demo.db --out demo/index.html
+      - name: Build production container
+        run: docker build --tag marketsignal:ci .
