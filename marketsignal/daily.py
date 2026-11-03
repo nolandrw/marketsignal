@@ -20,6 +20,7 @@ from .dashboard import render_dashboard
 from .detection import detect_signals
 from .gamma import GammaError, discover_markets
 from .models import Market, Signal
+from .quantitative import pitches_from_archive
 from .storage import Storage
 
 ARCHIVE_VERSION = 1
@@ -126,6 +127,15 @@ def run_daily(archive_dir: str | Path, report_file: str | Path, *,
     }
     # The static site exposes a structured payload for later consumers.
     payload = rendered.parent / "latest.json"
+    pitches = pitches_from_archive(today, max_pitches=max_markets)
+    # This is an unpublished analysis artifact, not a factual news article.
+    (rendered.parent / "pitches.json").write_text(json.dumps({
+        "schema_version": 1, "status": "quantitative_pitches_only",
+        "editorial_verification": "not_performed",
+        "observed_at": current["observed_at"],
+        "eligible_for_topic_review": sum(p.eligible_for_topic_review for p in pitches),
+        "pitches": [p.to_dict() for p in pitches],
+    }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     payload.write_text(json.dumps({key: value for key, value in latest.items()
                                    if key not in {"archive_file", "report_file"}},
                                   indent=2, sort_keys=True) + "\n", encoding="utf-8")
