@@ -26,6 +26,8 @@ jobs:
         run: python -m marketsignal demo --db demo/demo.db --out demo/index.html
       - name: Enforce offline agent process and result quality gates
         run: python -m marketsignal evaluate-agents --cases 120
+      - name: Exercise evidence-bound newspaper writing and quote verification
+        run: python -m marketsignal feature-demo > feature-demo-shadow.json
       - name: Probe free public research endpoints (diagnostic only)
         if: github.event_name == 'push'
         continue-on-error: true

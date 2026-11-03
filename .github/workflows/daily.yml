@@ -81,6 +81,11 @@ jobs:
           python -m marketsignal investigate-archive \
             --archive-file "data/archive/$(date -u +%F).json" \
             --max-candidates 3 > shadow-research.json
+      - name: Create newspaper reporting assignments (no unsupported articles)
+        run: |
+          python -m marketsignal assign-context \
+            --archive-file "data/archive/$(date -u +%F).json" \
+            --max-candidates 3 > shadow-context-assignments.json
       - name: Keep only sanitized research metrics for seven days
         uses: actions/upload-artifact@v4
         with:
@@ -88,4 +93,5 @@ jobs:
           path: |
             shadow-evaluation.json
             shadow-research.json
+            shadow-context-assignments.json
           retention-days: 7

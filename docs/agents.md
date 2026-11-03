@@ -5,6 +5,14 @@ adapters, shadow investigator, synthetic evaluation and scheduled shadow
 metrics exist. There are no LLM calls, paid APIs, independent full-text fact
 checks or automatic article publication. The data-only site remains separate.
 
+**Editorial direction v2:** The movement-only `TemplateWriter` below remains
+an internal audit baseline, **not** the intended publication format. The
+[newspaper-first standard](editorial-standard-v2.md) supersedes its market-first
+headline rule. A separate implemented feature path now asks wider reporting
+questions, requires dated source captures/quotes, plans article depth and
+produces cited, multi-paragraph shadow drafts. No market-price headline should
+be used for a general-interest article.
+
 ## Operating principle
 
 Treat the market movement as **an observation that may merit reporting**, not
@@ -128,8 +136,13 @@ and [X developer pricing](https://developer.x.com/).
 
 ### 3. Writer agent
 
-- Produce a concise market-first headline, short factual summary, why the
-  movement may matter, and linked evidence.
+- Produce a genuine newspaper story: a relevant factual development and human
+  stakes in the lead, previous expectations and rationale, credible context,
+  exact-source quotations, fair competing explanations and social implications.
+- Keep betting-market movements out of headlines and leads. Place them later
+  as a secondary indicator of shifting expectations, with clear limitations.
+- Determine the length from actual evidence density and source independence;
+  hold the story rather than pad thin research with invented detail.
 - Distinguish **Yes contract price** from a calibrated event probability.
 - Render numeric facts from the stored `Signal`, not freehand model output.
 - Never write "X caused the move" unless the explanation has direct evidence.
@@ -175,7 +188,8 @@ and [X developer pricing](https://developer.x.com/).
 
 ## Spend and maintenance limits
 
-The current workflow has **zero tokens and zero external research calls**.
+The current workflow uses **zero model tokens**; the bounded shadow research
+job does make free public-source discovery requests.
 When paid agents are enabled, proposed *starting* limits are 10 investigated
 signals/day, 5 fetched sources/signal, one writer and one independent verifier
 attempt per signal, and a hard daily-dollar ceiling. Those are design budgets,
@@ -190,6 +204,7 @@ ID and observation window to prevent duplicate stories.
 
 ```bash
 python -m marketsignal editorial-demo
+python -m marketsignal feature-demo
 python -m unittest discover -s tests -v
 ```
 
@@ -212,4 +227,5 @@ Before any unattended explanatory article can be released:
 See [quality gates](quality-gates.md) for the release scorecard. Neither a
 passing unit suite nor a live data-only dashboard satisfies editorial launch.
 See also the [versioned instructions](agent-instructions-v1.md) and the
-[measured synthetic and unmeasured production rubrics](agent-evaluation.md).
+[measured synthetic and unmeasured production rubrics](agent-evaluation.md),
+plus the [full newspaper-editorial standard](editorial-standard-v2.md).

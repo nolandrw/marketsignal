@@ -5,6 +5,12 @@ Narrative Scout, Evidence Investigator, editorial workflow and measured
 synthetic shadow evaluation are implemented. AI-authored news and paid cloud
 hosting are NOT activated.**
 
+**Editorial product direction:** MarketSignal aims to be a general-interest
+newspaper informed by prediction-market leads, **not** a site of odds-movement
+headlines. Its offline `feature-demo` now illustrates a wider reporting
+assignment, a cited evidence dossier, a context-first article and an
+editor-chosen word budget. See the [v2 newspaper standard](docs/editorial-standard-v2.md).
+
 MarketSignal is a portfolio-oriented, auditable pipeline for detecting meaningful
 changes in prediction-market contracts. It is designed to become a bounded
 multi-stage newsroom, with documented quality gates, a public track record,
@@ -26,6 +32,8 @@ python -m marketsignal collect --max-markets 150 --max-pages 8
 python -m marketsignal report
 python -m marketsignal daily --archive-dir data/archive --out site/index.html
 python -m marketsignal editorial-demo
+python -m marketsignal feature-demo
+python -m marketsignal assign-context --archive-file data/archive/2026-11-03.json
 python -m marketsignal evaluate-agents --cases 120
 python -m marketsignal source-smoke --archive-dir data/archive
 python -m marketsignal investigate-archive --archive-file data/archive/2026-11-03.json
@@ -71,6 +79,11 @@ suppression window per market.
   conservative narrative handoffs, an Evidence Investigator that refuses to
   certify discovery-only rumors, and automatic shadow metrics that never
   appear on the public site.
+- A separate newspaper-feature workflow with an eight-question contextual
+  assignment, provenance-checked source documents, exact-matched quotations,
+  earlier expectations, societal stakes, attributed alternative explanations,
+  editor-determined length, paragraph citation IDs and an independent shadow
+  verification gate. The CLI demonstration is deliberately fictional.
 - Optional PostgreSQL storage with one-time schema setup, 30-day retention
   (preserving signal evidence), stale-run recovery and a CLI health probe.
 - Non-root container image, explicit Secret Manager integration and opt-in
@@ -83,6 +96,9 @@ suppression window per market.
 - Actual model-powered research/writing, independent full-text verification,
   human-rated real-world editorial evaluation and article publication. Source
   **discovery** exists, but discovery is not fact-checking.
+- Automatic primary-source/full-text collection across subjects, real-world
+  context packets, professional semantic review and unattended newspaper
+  articles. The local feature demo's data is synthetic, not live reporting.
 - Cross-market clustering, professional licensing review, or fully unattended operation.
 
 CI live-source probes confirmed Polymarket history (49 observations) and,
@@ -142,8 +158,18 @@ scheduled data-only dashboard is deployed. The next research phase needs
 authorized reliable source access, real-content fact checking and real-world
 human-rated evaluations before an autonomous narrative publisher is safe.
 
+The **newspaper feature path** applies additional research/evidence gates:
+
+```text
+signal -> context reporting assignment -> documented background/quotes/stakes
+       -> source/digest/quote checks -> editor chooses depth
+       -> newspaper writer -> paragraph/evidence verifier -> shadow draft
+       -> human semantic review required before any publishing
+```
+
 See [agent instructions](docs/agent-instructions-v1.md),
 [agent evaluation](docs/agent-evaluation.md),
+[newspaper editorial standard](docs/editorial-standard-v2.md),
 [agent workflow](docs/agents.md), [architecture](docs/architecture.md),
 [quality gates](docs/quality-gates.md),
 [security boundaries](SECURITY.md), the [free daily runbook](docs/free-poc.md)

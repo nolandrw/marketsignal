@@ -16,6 +16,8 @@ from .detection import detect_signals
 from .agent_evals import evaluate_shadow
 from .agent_sources import BlueskySearch, GDELTSearch, PolymarketHistory, PublicJSONTransport
 from .editorial import Candidate, EditorialPipeline
+from .feature_demo import demo_feature
+from .feature_story import assign_reporting_from_archive
 from .gamma import GammaError, discover_markets
 from .investigation import NarrativeScout
 from .models import Market, Signal
@@ -141,11 +143,17 @@ def main(argv: list[str] | None = None) -> int:
     simulate.add_argument("--db", default="demo/demo.db")
     simulate.add_argument("--out", default="demo/index.html")
     commands.add_parser("editorial-demo", help="Replay a synthetic agent workflow without API calls")
+    commands.add_parser("feature-demo", help="Evidence-backed fictional newspaper article shadow test")
     investigate = commands.add_parser(
         "investigate-archive", help="Shadow-only bounded source research for archived signals"
     )
     investigate.add_argument("--archive-file", required=True)
     investigate.add_argument("--max-candidates", type=int, default=3)
+    assignments = commands.add_parser(
+        "assign-context", help="Generate structured newspaper reporting briefs from archived signals"
+    )
+    assignments.add_argument("--archive-file", required=True)
+    assignments.add_argument("--max-candidates", type=int, default=3)
     evaluate = commands.add_parser(
         "evaluate-agents", help="Run deterministic synthetic agent process/result rubrics"
     )
@@ -166,6 +174,10 @@ def main(argv: list[str] | None = None) -> int:
         return demo(arguments.db, arguments.out)
     if arguments.command == "editorial-demo":
         return editorial_demo()
+    if arguments.command == "feature-demo":
+        output = demo_feature()
+        print(json.dumps(output, indent=2))
+        return 0 if output.get("article") and not output["review"]["structural_provenance_issues"] else 1
     if arguments.command == "evaluate-agents":
         result = evaluate_shadow(arguments.cases)
         print(json.dumps(result, indent=2))
@@ -181,6 +193,11 @@ def main(argv: list[str] | None = None) -> int:
         results = replay_archive(arguments.archive_file, scout,
                                  max_candidates=arguments.max_candidates)
         print(json.dumps(safe_report(results), indent=2))
+        return 0
+    if arguments.command == "assign-context":
+        print(json.dumps(assign_reporting_from_archive(
+            arguments.archive_file, max_candidates=arguments.max_candidates
+        ), indent=2))
         return 0
     if arguments.command == "daily":
         if not 1 <= arguments.max_markets <= 1000 or not 1 <= arguments.max_pages <= 100:
