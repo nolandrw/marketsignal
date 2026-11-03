@@ -27,6 +27,7 @@ python -m marketsignal report
 python -m marketsignal daily --archive-dir data/archive --out site/index.html
 python -m marketsignal editorial-demo
 python -m marketsignal evaluate-agents --cases 120
+python -m marketsignal source-smoke --archive-dir data/archive
 python -m marketsignal investigate-archive --archive-file data/archive/2026-11-03.json
 ```
 

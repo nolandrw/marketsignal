@@ -31,6 +31,7 @@ retention, stale-run recovery and safeguards around production credentials.
 - [x] Fixed public-source adapters with timeouts, bounded responses and
   no arbitrary URL fetches; untrusted social content excluded from public output
 - [x] Reproducible 120-case synthetic process/result scoring in CI
+- [x] Nonblocking, sanitized public-source connectivity smoke on CI pushes
 - [x] Explicit versioned instructions, handoffs and an investigator that
   cannot self-certify source discovery as a verified event
 - [ ] Actual primary-source retrieval and rights-compliant evidence archive

@@ -161,6 +161,9 @@ Run the offline example with: python -m marketsignal editorial-demo
 
 Run reproducible evals with: python -m marketsignal evaluate-agents --cases 120
 
+Probe live public-source connectivity without retaining content with:
+python -m marketsignal source-smoke --archive-dir data/archive
+
 Run read-only research on a real archived signal with:
 python -m marketsignal investigate-archive --archive-file PATH_TO_ARCHIVE
 

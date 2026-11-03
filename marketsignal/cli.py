@@ -21,6 +21,7 @@ from .investigation import NarrativeScout
 from .models import Market, Signal
 from .newsroom import replay_archive, safe_report
 from .postgres import PostgresStorage, open_storage
+from .source_smoke import probe_sources
 from .storage import Storage
 
 
@@ -149,6 +150,10 @@ def main(argv: list[str] | None = None) -> int:
         "evaluate-agents", help="Run deterministic synthetic agent process/result rubrics"
     )
     evaluate.add_argument("--cases", type=int, default=120)
+    smoke = commands.add_parser(
+        "source-smoke", help="Public-source connectivity, sanitized counts only"
+    )
+    smoke.add_argument("--archive-dir", default="data/archive")
     arguments = parser.parse_args(argv)
     if arguments.command == "collect":
         if not 1 <= arguments.max_markets <= 1000 or not 1 <= arguments.max_pages <= 100:
@@ -165,6 +170,9 @@ def main(argv: list[str] | None = None) -> int:
         result = evaluate_shadow(arguments.cases)
         print(json.dumps(result, indent=2))
         return 0 if result["passes_offline_thresholds"] else 1
+    if arguments.command == "source-smoke":
+        print(json.dumps(probe_sources(arguments.archive_dir), indent=2))
+        return 0
     if arguments.command == "investigate-archive":
         transport = PublicJSONTransport(timeout=8, retries=1)
         scout = NarrativeScout(PolymarketHistory(transport),
