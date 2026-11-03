@@ -17,6 +17,7 @@ from .agent_evals import evaluate_shadow
 from .agent_sources import BlueskySearch, GDELTSearch, PolymarketHistory, PublicJSONTransport
 from .editorial import Candidate, EditorialPipeline
 from .feature_demo import demo_feature
+from .field_trial import audit_case, load_case, render_shadow
 from .feature_demo import fictional_feature_fixture
 from .feature_story import FeatureNewsroom, assign_reporting_from_archive
 from .context_discovery import discover_archive as discover_context_archive
@@ -251,6 +252,9 @@ def main(argv: list[str] | None = None) -> int:
     comments.add_argument("--archive-file", required=True)
     comments.add_argument("--max-events", type=int, default=2)
     commands.add_parser("newsroom-v3-demo", help="Synthetic bounded workflow; no release")
+    field = commands.add_parser("field-trial", help="Audit a real-topic curated evidence case and render a held shadow article")
+    field.add_argument("--case", required=True)
+    field.add_argument("--out", default="reports/field-trial.md")
     train = commands.add_parser("train-ranker", help="Train inactive ML challenger on verified human labels")
     train.add_argument("--labels", required=True)
     train.add_argument("--model-out", default="data/private/news-ranker-challenger.json")
@@ -297,6 +301,22 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if arguments.command == "newsroom-v3-demo":
         print(json.dumps(newsroom_v3_demo(), indent=2))
+        return 0
+    if arguments.command == "field-trial":
+        case = load_case(arguments.case)
+        audit = audit_case(case)
+        if audit["score"] != 100:
+            print(json.dumps({"status": "structural_hold", "audit": audit}, indent=2))
+            return 1
+        output = Path(arguments.out)
+        if output.suffix.lower() != ".md" or any(
+                component in {"site", "archive", "docs"} for component in output.parts):
+            parser.error("Shadow article output must be a private Markdown preview, not site/archive/docs")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(render_shadow(case), encoding="utf-8")
+        print(json.dumps({"status": "shadow_hold", "path": str(output),
+                          "structural_audit": audit, "independent_factcheck": False,
+                          "publication_enabled": False}, indent=2))
         return 0
     if arguments.command == "train-ranker":
         model = train_challenger(load_human_labels(arguments.labels))

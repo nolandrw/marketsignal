@@ -47,6 +47,7 @@ python -m marketsignal evaluate-agents --cases 120
 python -m marketsignal source-smoke --archive-dir data/archive
 python -m marketsignal investigate-archive --archive-file data/archive/2026-11-03.json
 python -m marketsignal newsroom-v3-demo
+python -m marketsignal field-trial --case data/private/your_research_case.json --out reports/field-trial.md
 python -m marketsignal quantitative-report --archive-file data/archive/2026-11-03.json
 # Optional manual, bounded source checks and history capture:
 python -m marketsignal kalshi-sample --max-pages 1
@@ -113,6 +114,13 @@ suppression window per market.
 - A fixed-feature, standard-library logistic challenger trained only after
   independently human-labeled historical editorial outcomes; time-ordered
   holdout and explicit nonactivation are required. No training labels exist yet.
+- A private evidence-linked **real-topic field trial** on Texas's November 2026
+  Senate race: eight short, attributed source extracts, an original newspaper
+  style shadow draft, exact claim/source references, unresolved research
+  questions and ten automatic structural checks. The trial **does not**
+  invent market movement or certify semantic truth; its real article body is
+  held outside public Git and never included in the public site. A separate
+  fictional fixture runs in CI. See [field trial](docs/field-trial.md).
 - Bounded historical-context discovery across prior, recent and broader
   reporting windows (GDELT metadata only), triggered in daily shadow runs
   and recorded as sanitized counts, with no claim that a news hit is verified.
