@@ -56,7 +56,7 @@ class NumericFact:
 @dataclass(frozen=True)
 class Claim:
     text: str
-    kind: str  # market_movement | verified_context | causal_explanation
+    kind: str  # market_movement | verified_context | attributed_speculation | causal_explanation
     evidence_ids: tuple[str, ...]
 
 

@@ -107,6 +107,19 @@ class EditorialTests(unittest.TestCase):
         self.assertIn("non_market_claim_requires_review", result.reasons)
         self.assertIn("model_or_custom_writer_requires_language_verification", result.reasons)
 
+    def test_attributed_social_speculation_is_reviewable_but_not_auto_approved(self):
+        class RumorWriter:
+            def write(self, candidate, evidence):
+                baseline = TemplateWriter().write(candidate, evidence)
+                rumor = Claim("Some people are discussing an unverified launch delay.",
+                              "attributed_speculation", (evidence[0].evidence_id,))
+                return replace(baseline, claims=baseline.claims + (rumor,))
+
+        result = EditorialPipeline(writer=RumorWriter()).run(sample_candidate())
+        self.assertEqual(result.status, "held")
+        self.assertIn("non_market_claim_requires_review", result.reasons)
+        self.assertIn("model_or_custom_writer_requires_language_verification", result.reasons)
+
     def test_custom_writer_cannot_self_certify_as_trusted(self):
         class ImposterWriter:
             def write(self, candidate, evidence):

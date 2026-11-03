@@ -25,9 +25,12 @@ retention, stale-run recovery and safeguards around production credentials.
 
 - [x] Independent candidate, evidence, numeric-fact and claim contracts
 - [x] Executable synthetic triage → researcher → writer → verifier → editor
-- [x] Unknown/high-risk and causal-claim holds; no publisher attached
+- [x] Unknown/high-risk, causal-claim and attributed-social-speculation holds;
+  no publisher attached
 - [x] Unit cases for bad math, evidence provenance, agent failure and retry ID
 - [ ] Actual primary-source retrieval and rights-compliant evidence archive
+- [ ] Social-source coverage, independence, narrative-amplification and
+  source-deletion compliance tests before any public speculative context
 - [ ] Model writer, independent verifier and versioned prompt registry
 - [ ] Calibrated evaluation of models and story usefulness on historical cases
 - [ ] Idempotent publication state machine and operational kill switch
