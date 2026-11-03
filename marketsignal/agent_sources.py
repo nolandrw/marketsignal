@@ -7,6 +7,7 @@ All endpoints are fixed; caller input is encoded as query parameters.
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import re
 import time
@@ -21,6 +22,8 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 MAX_RESPONSE_BYTES = 768 * 1024
 ALLOWED_HOSTS = {
     "clob.polymarket.com",
+    "gamma-api.polymarket.com",
+    "external-api.kalshi.com",
     "public.api.bsky.app",
     "api.gdeltproject.org",
 }
@@ -103,6 +106,64 @@ class SourceLead:
     posted_at: int
     author_key: str = ""
     # These are DISCOVERY leads, not independently verified event facts.
+
+
+@dataclass(frozen=True)
+class CommentPulse:
+    event_id: str
+    observed_comments: int
+    recent_comments_24h: int
+    distinct_recent_accounts: int
+    theory_leads: tuple[SourceLead, ...]
+    evidence_grade: str = "unverified_discussion_only"
+
+
+class PolymarketComments:
+    """Read bounded event comments as *hypothesis seeds*, never fact evidence."""
+
+    ENDPOINT = "https://gamma-api.polymarket.com/comments"
+
+    def __init__(self, transport: JSONTransport):
+        self.transport = transport
+
+    def pulse(self, event_id: str, event_slug: str, observed_at: int,
+              *, limit: int = 30) -> CommentPulse:
+        if (not event_id.isdigit() or not 1 <= len(event_id) <= 30 or
+                not re.fullmatch(r"[a-zA-Z0-9_-]{1,120}", event_slug) or
+                not 1 <= limit <= 30 or observed_at <= 0):
+            raise ValueError("Invalid comment lookup")
+        rows = self.transport.get(self.ENDPOINT, {
+            "parent_entity_type": "Event", "parent_entity_id": int(event_id),
+            "limit": limit, "order": "createdAt", "ascending": "false",
+        })
+        if not isinstance(rows, list):
+            raise SourceError("Unexpected comment response")
+        ids: set[str] = set()
+        authors: set[str] = set()
+        leads = []
+        recent_count = 0
+        for item in rows[:limit]:
+            if not isinstance(item, dict):
+                continue
+            comment_id = _text(item.get("id"), 90)
+            if not comment_id or comment_id in ids:
+                continue
+            ids.add(comment_id)
+            created = _timestamp(item.get("createdAt"))
+            if not observed_at - 86400 <= created <= observed_at:
+                continue
+            recent_count += 1
+            author = _text(item.get("userAddress"), 160)
+            if author:
+                # Only count distinct authors; do not return or archive IDs.
+                authors.add(hashlib.sha256(author.encode()).hexdigest())
+            body = _text(item.get("body"), 220)
+            if len(body) >= 25 and len(leads) < 5:
+                leads.append(SourceLead(
+                    "polymarket_comment_unverified",
+                    f"https://polymarket.com/event/{event_slug}", body, created,
+                ))
+        return CommentPulse(event_id, len(ids), recent_count, len(authors), tuple(leads))
 
 
 def _text(value: object, length: int = 240) -> str:

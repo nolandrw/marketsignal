@@ -19,7 +19,6 @@ from .models import Market
 
 API_URL = "https://gamma-api.polymarket.com/events/keyset"
 USER_AGENT = "MarketSignal/0.1 (read-only portfolio research)"
-EXCLUDED_LABELS = {"sports", "esports", "crypto", "entertainment", "weather"}
 VALID_SLUG = re.compile(r"^[a-zA-Z0-9_-]+$")
 
 
@@ -68,25 +67,24 @@ def _number(value: object) -> float | None:
         return None
 
 
-def _is_sports_or_excluded(event: dict, market: dict) -> bool:
-    labels = [str(event.get("category") or ""), str(market.get("category") or "")]
+def _category(event: dict, market: dict) -> str:
+    labels = [str(market.get("category") or ""), str(event.get("category") or "")]
     for tag in event.get("tags") or []:
         if isinstance(tag, dict):
-            labels.extend([str(tag.get("label") or ""), str(tag.get("slug") or "")])
-    normalized = {label.strip().lower() for label in labels}
-    return bool(normalized & EXCLUDED_LABELS) or bool(market.get("sportsMarketType"))
+            labels.append(str(tag.get("label") or tag.get("slug") or ""))
+    if market.get("sportsMarketType"):
+        return "sports"
+    return next((label.strip().lower()[:60] for label in labels if label.strip()), "general")
 
 
 def parse_market(event: dict, market: dict, *, now: datetime | None = None) -> Market | None:
     """Return only usable, active, binary Yes/No markets.
 
-    Filtering is intentionally conservative. No missing numeric value is
-    silently interpreted as zero. Sports and other excluded categories are not
-    included in the initial general-interest watchlist.
+    Filtering is intentionally conservative about numerical integrity, not
+    editorial category. All subject areas are eligible for the owner's broad
+    coverage mandate; a downstream topic desk decides publication relevance.
     """
     if not (market.get("active") and not market.get("closed")):
-        return None
-    if _is_sports_or_excluded(event, market):
         return None
     outcomes = _json_list(market.get("outcomes"))
     prices = _json_list(market.get("outcomePrices"))
@@ -132,6 +130,7 @@ def parse_market(event: dict, market: dict, *, now: datetime | None = None) -> M
         volume_24h=volume,
         liquidity=liquidity,
         end_date=end_date,
+        category=_category(event, market),
     )
 
 

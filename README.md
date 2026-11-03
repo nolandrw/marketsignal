@@ -11,6 +11,14 @@ headlines. Its offline `feature-demo` now illustrates a wider reporting
 assignment, a cited evidence dossier, a context-first article and an
 editor-chosen word budget. See the [v2 newspaper standard](docs/editorial-standard-v2.md).
 
+**Newsroom v3 foundations:** multi-horizon quantitative pitches, optional
+bounded historical backfill, an experimental isolated Kalshi adapter, an
+explicit bounded editorial state machine, claim review contracts, fictional
+end-to-end shadow rehearsal, an eight-persona structural diagnostic panel,
+private audit/oversight, and a human-label-only offline ML challenger. No
+model-generated reporting, semantic fact-checking or live-article publication
+has been activated. See the [v3 newsroom blueprint](docs/newsroom-v3.md).
+
 MarketSignal is a portfolio-oriented, auditable pipeline for detecting meaningful
 changes in prediction-market contracts. It is designed to become a bounded
 multi-stage newsroom, with documented quality gates, a public track record,
@@ -38,6 +46,12 @@ python -m marketsignal discover-context --archive-file data/archive/2026-11-03.j
 python -m marketsignal evaluate-agents --cases 120
 python -m marketsignal source-smoke --archive-dir data/archive
 python -m marketsignal investigate-archive --archive-file data/archive/2026-11-03.json
+python -m marketsignal newsroom-v3-demo
+python -m marketsignal quantitative-report --archive-file data/archive/2026-11-03.json
+# Optional manual, bounded source checks and history capture:
+python -m marketsignal kalshi-sample --max-pages 1
+python -m marketsignal comment-pulse --archive-file data/archive/2026-11-03.json --max-events 1
+python -m marketsignal backfill-history --archive-file data/archive/2026-11-03.json --max-markets 3 --days 30
 ```
 
 The `daily` command collects one real snapshot per UTC date, writes an
@@ -65,7 +79,8 @@ suppression window per market.
 ## What's implemented
 
 - Current Gamma `/events/keyset` discovery with stable cursor pagination.
-- Active binary Yes/No market normalization, category and data-quality filters.
+- Active binary Yes/No market normalization and data-quality filters; all
+  market topic categories can now be considered, including sports and crypto.
 - Initial watchlist ranked by 24-hour trading volume, bounded by API pages.
 - Immutable, timestamped local market snapshots and run audit records.
 - Deterministic 1-hour and 24-hour price-delta detection.
@@ -85,6 +100,19 @@ suppression window per market.
   earlier expectations, societal stakes, attributed alternative explanations,
   editor-determined length, paragraph citation IDs and an independent shadow
   verification gate. The CLI demonstration is deliberately fictional.
+- Multi-horizon 1h/24h/7d/30d observation-based ranking from local archives,
+  category-specific uncalibrated fallbacks, missing-data abstention, optional
+  manual price-history backfill, and a data-only `site/pitches.json` output.
+- Optional isolated public Kalshi quote discovery and exceptionally low-trust
+  Polymarket discussion signals; neither is silently added as verified factual
+  reporting nor merged into incompatible Polymarket trading volume units.
+- Versioned newsroom controller with explicit research/editorial return limits,
+  claim/dossier provenance contracts, manual-owner release gate, private
+  tamper-evident SQLite audit events, eight structural panel perspectives, and
+  change proposals with carefully bounded automatic operational authority.
+- A fixed-feature, standard-library logistic challenger trained only after
+  independently human-labeled historical editorial outcomes; time-ordered
+  holdout and explicit nonactivation are required. No training labels exist yet.
 - Bounded historical-context discovery across prior, recent and broader
   reporting windows (GDELT metadata only), triggered in daily shadow runs
   and recorded as sanitized counts, with no claim that a news hit is verified.
@@ -96,7 +124,8 @@ suppression window per market.
 ## What's NOT implemented
 
 - A provisioned hosted database or paging alerts.
-- Backfilled history, orderbook spread validation, or statistical calibration.
+- Automatically scheduled backfilled history, orderbook spread validation, or
+  validated statistical significance / topic-level threshold calibration.
 - Actual model-powered research/writing, independent full-text verification,
   human-rated real-world editorial evaluation and article publication. Source
   **discovery** exists, but discovery is not fact-checking.
@@ -136,9 +165,10 @@ Current thresholds (hypotheses, not calibrated statistical significance):
 | Duplicate market signal cooldown | 6 hours |
 
 The watchlist is a bounded sample of high-activity events, not all Polymarket
-markets. Sports, crypto, entertainment, and weather are omitted from the
-general-interest scope when the feed provides identifying metadata. This is
-not a fully exhaustive category classifier.
+markets. Sports, crypto, entertainment, and weather are now eligible, though
+category parsing and balanced coverage have not been externally validated.
+The existing 15pp 24-hour detector remains separate from v3's category-aware
+8pp default **pitch** gate. Neither is statistically calibrated.
 
 ## Architecture
 
@@ -173,6 +203,7 @@ signal -> context reporting assignment -> documented background/quotes/stakes
 
 See [agent instructions](docs/agent-instructions-v1.md),
 [agent evaluation](docs/agent-evaluation.md),
+[v3 newsroom operating manual](docs/newsroom-v3.md),
 [newspaper editorial standard](docs/editorial-standard-v2.md),
 [agent workflow](docs/agents.md), [architecture](docs/architecture.md),
 [quality gates](docs/quality-gates.md),

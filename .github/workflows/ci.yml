@@ -28,6 +28,8 @@ jobs:
         run: python -m marketsignal evaluate-agents --cases 120
       - name: Exercise evidence-bound newspaper writing and quote verification
         run: python -m marketsignal feature-demo > feature-demo-shadow.json
+      - name: Exercise newsroom v3 full fictional handoff and fail-closed release
+        run: python -m marketsignal newsroom-v3-demo > newsroom-v3-shadow.json
       - name: Probe free public research endpoints (diagnostic only)
         if: github.event_name == 'push'
         continue-on-error: true
