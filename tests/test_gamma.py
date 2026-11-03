@@ -21,12 +21,19 @@ class GammaParsingTests(unittest.TestCase):
         self.assertAlmostEqual(parsed.yes_price, 0.4)
         self.assertEqual(parsed.yes_token_id, "999999")
 
-    def test_excludes_closed_and_sports(self):
+    def test_excludes_closed_but_includes_sports(self):
         self.market["closed"] = True
         self.assertIsNone(parse_market(self.event, self.market))
         self.market["closed"] = False
         self.event["tags"] = [{"label": "Sports"}]
-        self.assertIsNone(parse_market(self.event, self.market))
+        parsed = parse_market(self.event, self.market)
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.category, "politics")
+
+    def test_sports_market_type_is_preserved_as_category(self):
+        self.market["sportsMarketType"] = "moneyline"
+        parsed = parse_market(self.event, self.market)
+        self.assertEqual(parsed.category, "sports")
 
     def test_missing_quotes_are_not_zero(self):
         self.market["outcomePrices"] = None
