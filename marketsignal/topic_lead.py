@@ -131,6 +131,8 @@ class TopicLeadAssessment:
     revisit_condition: str
     referenced_source_ids: tuple[str, ...]
     publication_enabled: bool = False
+    evaluation_only: bool = False
+    test_fixture_reason: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -154,7 +156,21 @@ class TopicLeadAgent:
         self.model = model
 
     def assess(self, context: TopicLeadContext) -> TopicLeadAssessment:
-        raw = self.model.complete("topic_lead", context.to_dict())
+        """Production entry: ineligible quantitative pitches always remain held."""
+        return self._assess(context)
+
+    def _assess(self, context: TopicLeadContext, *, test_fixture_reason: str = "") -> TopicLeadAssessment:
+        """Private test-only hook; only evaluation_harness should set a reason."""
+        context_packet = context.to_dict()
+        if test_fixture_reason:
+            context_packet["test_only_evaluation"] = {
+                "quantitative_gate_override": True,
+                "reason": test_fixture_reason,
+                "original_quantitative_eligibility": context.quantitative_pitch.eligible_for_topic_review,
+                "original_quantitative_reasons": list(context.quantitative_pitch.reasons),
+                "publication_enabled": False,
+            }
+        raw = self.model.complete("topic_lead", context_packet)
         if not isinstance(raw, dict):
             raise ValueError("Topic Lead model must return an object")
         scores = raw["scores"]
@@ -222,7 +238,7 @@ class TopicLeadAgent:
                     reason_codes.append("score_below_research_floor")
             elif rubric.score < GO_THRESHOLD:
                 hold("score_below_go_threshold")
-            if not context.quantitative_pitch.eligible_for_topic_review:
+            if not context.quantitative_pitch.eligible_for_topic_review and not test_fixture_reason:
                 hold("quantitative_triage_not_eligible")
             if not context.resolution_terms.strip():
                 hold("unresolved_market_terms")
@@ -258,6 +274,8 @@ class TopicLeadAgent:
             raise ValueError("Held Topic Lead pitch lacks a revisit condition")
         if not reason_codes:
             reason_codes = [f"topic_lead_{disposition}"]
+        if test_fixture_reason:
+            reason_codes.append("test_fixture_only_quantitative_override")
 
         return TopicLeadAssessment(
             story_id=context.story_id, disposition=disposition,
@@ -271,6 +289,7 @@ class TopicLeadAgent:
             uncertainties=uncertainties, sensitivity_flags=sensitivity_flags,
             revisit_condition=raw["revisit_condition"],
             referenced_source_ids=tuple(sorted(referenced)),
+            evaluation_only=bool(test_fixture_reason), test_fixture_reason=test_fixture_reason,
         )
 
 

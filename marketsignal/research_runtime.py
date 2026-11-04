@@ -19,6 +19,7 @@ from .research_retrieval import (MultiSourceResearchProvider, OfficialFeedSearch
 from .source_capture import HostPermission, SourceCaptureGateway
 from .topic_lead import TopicLeadAgent
 from .oversight import ProcessFailureEvent, ProcessOverseer
+from .evaluation_harness import ResearchTestFixture, evaluate_topic_fixture
 
 
 def load_seed_captures(path: str | Path) -> tuple[ResearchCapture, ...]:
@@ -84,7 +85,8 @@ def configure_research_sources(policy: dict) -> MultiSourceResearchProvider:
 
 
 def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
-                        *, angle_id: str, research_policy: dict, model) -> dict:
+                        *, angle_id: str, research_policy: dict, model,
+                        test_fixture: ResearchTestFixture | None = None) -> dict:
     """Live-readonly source collection + model stages only when caller opts in."""
     events: list[ProcessFailureEvent] = []
 
@@ -98,13 +100,15 @@ def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
         return {**payload, "process_events": [asdict(e) for e in events],
                 "process_overseer": ProcessOverseer().diagnose(events)}
 
-    topic = TopicLeadAgent(model).assess(context)
+    topic = (evaluate_topic_fixture(model, context, test_fixture)
+             if test_fixture is not None else TopicLeadAgent(model).assess(context))
     if topic.disposition != "go":
         log("topic_lead", "topic_lead_" + topic.disposition)
         return annotated({"case_id": context.story_id, "topic_lead": topic.to_dict(),
                           "investigator": None, "handoff_contract": None,
                           "evidence_verifier": None, "status": "topic_lead_held",
-                          "publication_enabled": False})
+                          "publication_enabled": False,
+                          "evaluation_only": bool(test_fixture)})
     assignment = assignment_from_topic_lead(context, topic, captures,
                                             angle_id=angle_id, research_mode="live_shadow")
     research = configure_research_sources(research_policy)
@@ -140,4 +144,5 @@ def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
             "status": "provisionally_verified_for_editorial_review"
                       if verification and verification.status == "provisionally_verified"
                       else "held_pending_research_or_review",
-            "publication_enabled": False, "human_factcheck_attested": False})
+            "publication_enabled": False, "human_factcheck_attested": False,
+            "evaluation_only": bool(test_fixture)})

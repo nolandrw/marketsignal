@@ -26,6 +26,7 @@ from .context_discovery import ContextDiscoveryAgent
 from .feature_demo import fictional_feature_fixture
 from .fictional_investigator_v3 import run_fictional_v3_handoff
 from .research_runtime import load_seed_captures, run_research_shadow
+from .evaluation_harness import load_test_fixture
 from .feature_story import FeatureNewsroom, assign_reporting_from_archive
 from .context_discovery import discover_archive as discover_context_archive
 from .gamma import GammaError, discover_markets
@@ -387,6 +388,8 @@ def main(argv: list[str] | None = None) -> int:
     research.add_argument("--angle-id", required=True, help="Explicit selected Topic Lead angle")
     research.add_argument("--out", default="data/private/investigator-v3-shadow.json")
     research.add_argument("--model", default="gpt-5-mini", help="Opt-in API model; may incur charges")
+    research.add_argument("--test-fixture-file", default=None,
+                          help="Optional explicitly private, test-only subject; bypasses quantitative eligibility only")
     field = commands.add_parser("field-trial", help="Audit a real-topic curated evidence case and render a held shadow article")
     field.add_argument("--case", required=True)
     field.add_argument("--out", default="reports/field-trial.md")
@@ -490,7 +493,9 @@ def main(argv: list[str] | None = None) -> int:
             policy = json.loads(policy_file.read_text(encoding="utf-8"))
             result = run_research_shadow(context, captures, angle_id=arguments.angle_id,
                                          research_policy=policy,
-                                         model=ResponsesJSONModel(arguments.model))
+                                         model=ResponsesJSONModel(arguments.model),
+                                         test_fixture=(load_test_fixture(arguments.test_fixture_file)
+                                                       if arguments.test_fixture_file else None))
         except (OSError, ValueError, KeyError, TypeError, ModelUnavailable,
                 RuntimeError, TimeoutError) as exc:
             print(json.dumps({"status": "research_hold", "reason": type(exc).__name__,
