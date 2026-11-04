@@ -26,6 +26,7 @@ ALLOWED_HOSTS = {
     "external-api.kalshi.com",
     "public.api.bsky.app",
     "api.gdeltproject.org",
+    "api.crossref.org",
 }
 
 
@@ -297,4 +298,47 @@ class GDELTSearch:
                 continue
             leads.append(SourceLead("gdelt", row["url"], _text(row.get("title")),
                                     published, _text(row.get("domain"), 150)))
+        return tuple(leads)
+
+
+class CrossrefSearch:
+    """Published academic metadata leads; neither peer review nor fact proof."""
+
+    ENDPOINT = "https://api.crossref.org/works"
+
+    def __init__(self, transport: JSONTransport):
+        self.transport = transport
+
+    def search(self, query: str, since: int, until: int, limit: int = 10) -> tuple[SourceLead, ...]:
+        if not 1 <= limit <= 20 or not 3 <= len(query.strip()) <= 120 or not 0 < since < until:
+            raise ValueError("Invalid scholarly search bounds")
+        result = self.transport.get(self.ENDPOINT, {
+            "query.bibliographic": query, "rows": limit,
+            "filter": "from-pub-date:" + datetime.fromtimestamp(since, timezone.utc).strftime("%Y-%m-%d") +
+                      ",until-pub-date:" + datetime.fromtimestamp(until, timezone.utc).strftime("%Y-%m-%d"),
+        })
+        message = result.get("message", {}) if isinstance(result, dict) else {}
+        items = message.get("items", []) if isinstance(message, dict) else []
+        if not isinstance(items, list):
+            raise SourceError("Malformed Crossref response")
+        leads = []
+        for row in items[:limit]:
+            if not isinstance(row, dict):
+                continue
+            title = row.get("title")
+            title = title[0] if isinstance(title, list) and title else ""
+            date = row.get("published") or row.get("issued") or {}
+            dateparts = date.get("date-parts", [[]]) if isinstance(date, dict) else [[]]
+            try:
+                parts = dateparts[0]
+                y, m, d = int(parts[0]), int(parts[1]) if len(parts) > 1 else 1, \
+                    int(parts[2]) if len(parts) > 2 else 1
+                published = int(datetime(y, m, d, tzinfo=timezone.utc).timestamp())
+            except (TypeError, ValueError, IndexError, OverflowError):
+                continue
+            url = row.get("URL") or ""
+            if not since <= published <= until or not _https_public_url(url) or not title:
+                continue
+            leads.append(SourceLead("crossref", url, _text(title, 240), published,
+                                    _text(row.get("publisher"), 150)))
         return tuple(leads)
