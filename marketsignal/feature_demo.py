@@ -10,6 +10,7 @@ from .feature_story import (
     ContextClaim, DirectQuote, FeatureNewsroom, ReportingDossier, SourceDocument,
 )
 from .models import Market, Signal
+from .story_thesis import EditorialSelection, StoryPitch
 
 
 def fictional_feature_fixture() -> tuple[Candidate, ReportingDossier]:
@@ -132,6 +133,35 @@ def fictional_feature_fixture() -> tuple[Candidate, ReportingDossier]:
                     "A delay is frustrating, but it is not evidence that the design will fail.",
                     "review-2026"),
     )
+    pitches = (
+        StoryPitch(
+            "review-delay", "A Coastal City's Flood Defense Plan Hits an Unexpected Pause",
+            "A promised flood defense faces an unexpected engineering delay, leaving vulnerable harbor residents waiting for protection.",
+            "Residents need flood protection, but engineers cannot approve the project until they investigate its foundations.",
+            "A supposedly nearly complete review has produced a new examination and pushed back the final vote.",
+            "The city postponed the scheduled decision after engineers flagged subsurface survey questions.",
+            "Residents and fishing businesses face consequences from delay or construction, even without proof the design is unsafe.",
+            "The story explains the concrete foundation dispute and its costs, beyond the movement of a betting contract.",
+            ("development", "prior-view", "stakes-people", "stakes-business", "prior-reason"),
+            ("counterpoint",),
+        ),
+        StoryPitch(
+            "material-costs", "Are Rising Costs Complicating Crescent Bay's Flood Defense Plan?",
+            "Local contractors suspect material prices might add scheduling pressure to the city's ambitious flood plan.",
+            "Contractors are worried about future bids, but officials have cited engineering questions as the reason for the delay.",
+            "Cost concerns entered discussion just as engineering delays left the project without an approval date.",
+            "Contractors publicly raised material prices after the city ordered an additional foundation review.",
+            "The city's residents and businesses may face further costs if the schedule slips into the storm season.",
+            "This angle would test a tempting alternative theory, but no documentary evidence yet links costs to the decision.",
+            ("development", "prior-view", "stakes-business", "hypothesis-cost"),
+            ("counterpoint",),
+        ),
+    )
+    selected = EditorialSelection(
+        "review-delay", "A Flood Defense Plan Hits a Pause—and Leaves a Harbor Waiting",
+        "The engineering notice provides a concrete development and its timing, while independent reporting documents "
+        "residential and business stakes. The material-cost explanation remains unsupported and cannot anchor the article.",
+    )
     dossier = ReportingDossier(
         1, candidate.candidate_id, "Crescent Bay coastal barrier",
         "A Coastal City's Flood Defense Plan Hits an Unexpected Pause",
@@ -139,6 +169,8 @@ def fictional_feature_fixture() -> tuple[Candidate, ReportingDossier]:
         ("What exactly changed in the engineering review?",
          "Can costs be separated from the documented foundation concerns?",
          "What temporary protections exist for affected residents?"),
+        story_pitches=pitches,
+        editorial_selection=selected,
     )
     return candidate, dossier
 
