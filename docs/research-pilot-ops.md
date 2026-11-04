@@ -99,12 +99,31 @@ final provider invoice never exceeds $2 due delayed metering.
 
 ## Readiness blockers
 
-- The current development environment has no `OPENAI_API_KEY`.
+- Nolan reported configuring the GitHub environment/API key on November 4.
+  This runtime cannot inspect or retrieve the secret, and no paid job has
+  been dispatched. The local development process still has no API key.
 - There are **zero complete, permissioned four-case source packages** in
   `data/private/` here. Official document URLs already identified in
   [real-case evaluation preparation](real-case-evaluation-v1.md) are source
   leads, not captured documents. The conservative Fed source gateway
   previously returned an HTTP error. No workaround was attempted.
+- The [GitHub CI source-shape probe (run 137)](https://github.com/nolandrw/marketsignal/actions/runs/41923807475)
+  confirmed **0 of 5 official leads were fully capturable** by the existing
+  gateway, even on a GitHub-hosted runner:
+
+  | Lead | Observed outcome | Proper next step |
+  |---|---|---|
+  | Hormuz / MARAD advisory | HTTPError | Investigate allowed official feeds or alternative first-party records |
+  | IPO / SEC filing index | Index retrieved, but no supported dated document-body structure | Build bounded SEC filing ingestion with EDGAR metadata and original document checks |
+  | Fed / FOMC statement | HTTPError | Explore official release feeds/PDFs under publisher permissions |
+  | UAP / AARO report index | HTTPError | Identify supported original report formats and rights-compliant ingestion |
+  | UAP / NASA FAQ | Exceeded 240-KB HTML ceiling | Find a smaller official record or implement bounded targeted parsing |
+
+  This probe saved only host-level diagnostics, never source text. Robots or
+  publisher access denial remains a HOLD, not a reason to change user agents,
+  bypass rate limits or treat web snippets as authenticated captures. Supporting
+  official PDFs/structured feeds will require explicit format-specific date,
+  origin and content-hash validation plus regression tests.
 - The manual workflow is a draft PR change and is not yet on the default
   branch; nothing can be dispatched through that workflow until reviewed
   and merged.
