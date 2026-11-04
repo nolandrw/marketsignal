@@ -49,6 +49,13 @@ flowchart TD
   provide the date if its publisher host and document host match; embedded
   JSON/XML publication metadata is also accepted. Date-only labels are treated
   as end-of-day UTC, and the source must predate the candidate's **as-of**.
+- Explicitly curated documents with an unknown discovery timestamp use
+  `publication_date_basis: date_unknown` and a zero lead timestamp; they
+  cannot be accepted until the *document itself* supplies its date. For
+  approved government records, only narrowly defined EIA release labels,
+  BLS release embargo headers and SEC cover-page filing labels supply a
+  publication date when HTML metadata is absent. Legacy `<pre>` releases
+  retain separate, attributable text lines.
 - A SHA-256 fingerprint of the **original downloaded bytes** is kept, with
   MIME, extraction method and locations (PDF page, JSON field pointer,
   CSV row, XML element or text line). Only up to three bounded passages

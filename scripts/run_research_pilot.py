@@ -15,6 +15,7 @@ import os
 import re
 import tarfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from marketsignal.cli import main as run_cli
 from marketsignal.evaluation_harness import load_test_fixture
@@ -29,6 +30,9 @@ MANIFEST = Path("data/private/pilot-manifest.json")
 LIMIT_USD = "2.00"
 MAX_ARCHIVE_BYTES = 36_000  # base64 below GitHub's 48-KB secret ceiling
 MAX_INPUT_BYTES = 250_000
+PUBLISHER_DATE_BASES = {"publisher_page_metadata", "embedded_json_metadata",
+                        "embedded_xml_metadata", "first_party_official_feed",
+                        "publisher_document_header"}
 
 
 def _private_file(value: str) -> Path:
@@ -61,17 +65,67 @@ def _rows(manifest: Path = MANIFEST) -> list[dict]:
     return cases
 
 
+def require_complete_source_packet(context, captures, policy: dict,
+                                   source_rows: list[dict]) -> None:
+    """Zero-model-cost evidence and rights gate; never certify truth here.
+
+    In particular, three excerpt rows from one PDF count as *one* origin.
+    A licensed independent reporting source must be explicitly allowlisted.
+    """
+    allowed = {row["host"]: row for row in policy["publishers"]}
+    leads = {lead.source_id: lead for lead in context.sources}
+    if (not 3 <= len(captures) <= 15 or len(captures) != len(source_rows) or
+            len(leads) < len(captures) or
+            {cap.source_id for cap in captures} !=
+            {row.get("source_id") for row in source_rows}):
+        raise ValueError("Pilot evidence inventory is incomplete")
+    origins = set()
+    kinds = set()
+    source_kind_map = {"primary_record": {"official_record", "original_research"},
+                       "independent_reporting": {"independent_reporting"},
+                       "public_statement": {"statement"}}
+    for capture, row in zip(captures, source_rows):
+        host = urlsplit(capture.url).hostname
+        permission = allowed.get(host)
+        lead = leads.get(capture.source_id)
+        if (not isinstance(row, dict) or row.get("source_id") != capture.source_id or
+                permission is None or lead is None or
+                capture.publisher != host or capture.origin_key != host or
+                capture.source_kind != permission["kind"] or
+                row.get("copyright_basis") != permission["copyright_basis"] or
+                row.get("robots_decision") != "allowed" or
+                capture.publication_date_basis not in PUBLISHER_DATE_BASES or
+                not re.fullmatch(r"[a-f0-9]{64}", capture.document_sha256) or
+                not capture.content_location or not capture.mime_type or
+                not 0 < capture.published_at <= context.as_of or
+                capture.captured_at > context.as_of + 30 * 60 or
+                lead.url != capture.url or lead.publisher != capture.publisher or
+                lead.origin_key != capture.origin_key or
+                lead.published_at != capture.published_at or
+                capture.source_kind not in source_kind_map.get(lead.source_type, set())):
+            raise ValueError("Pilot source lacks original, dated, permissioned provenance")
+        origins.add(capture.origin_key)
+        kinds.add(capture.source_kind)
+    if len(origins) < 3 or not ({"official_record", "original_research"} & kinds) or \
+            "independent_reporting" not in kinds:
+        raise ValueError("Pilot requires three origins, a primary source, and licensed reporting")
+
+
 def preflight(cases: list[dict]) -> None:
     """Validate the entire private batch before exposing an API credential."""
     for case in cases:
         context = load_topic_context(_private_file(case["context_file"]))
         fixture = load_test_fixture(_private_file(case["test_fixture_file"]))
-        captures = load_seed_captures(_private_file(case["captures_file"]))
+        captures_file = _private_file(case["captures_file"])
+        captures = load_seed_captures(captures_file)
         policy_file = _private_file(case["policy_file"])
         if policy_file.stat().st_size > 64_000:
             raise ValueError("Oversized research policy")
         policy = json.loads(policy_file.read_text(encoding="utf-8"))
         configure_research_sources(policy)  # construction only; no external fetch
+        source_packet = json.loads(captures_file.read_text(encoding="utf-8"))
+        if not isinstance(source_packet, dict) or not isinstance(source_packet.get("source_rows"), list):
+            raise ValueError("Pilot requires an original source-capture packet")
         lead_sources = {lead.source_id: lead for lead in context.sources}
         if (context.quantitative_pitch.market_id != EXPECTED_IDS[case["name"]] or
                 context.story_id != fixture.case_id or fixture.market_id != EXPECTED_IDS[case["name"]] or
@@ -81,6 +135,8 @@ def preflight(cases: list[dict]) -> None:
                         capture.url == lead_sources[capture.source_id].url
                         for capture in captures)):
             raise ValueError("Pilot identity, coverage, or source clock mismatch")
+        require_complete_source_packet(context, captures, policy,
+                                       source_packet["source_rows"])
 
 
 def run() -> int:

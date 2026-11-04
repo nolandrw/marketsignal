@@ -53,6 +53,25 @@ entries mean the test proceeds with the first *actual* Topic Lead proposed
 angle, never a made-up human-predicted model ID. It cannot be used in
 production-like entry without the test fixture.
 
+### Read-only four-case original-source preparation
+
+Run from the repository root to fetch **new, actual** Gamma API quotes for the
+four frozen market IDs, then attempt a short, preselected list of official
+original documents under publisher `robots.txt` and bounded retrieval:
+
+```bash
+python -m scripts.prepare_pilot_evidence
+```
+
+This creates four timestamp-matched private contexts, raw capture-row packets,
+test-only fixtures, source policies, a manifest and a sanitized
+`data/private/pilot-readiness.json`. It **does not** invent historical prices,
+certify coverage review, grant independent-reporting rights, run a model,
+or upload any file. Re-running captures a **new** quote and overwrites only
+these generated private pilot preparation files. Never submit the output to
+GitHub as a real pilot until the missing human coverage and rights checks have
+been completed and the entire batch passes `preflight`.
+
 After all inputs pass the offline preflight:
 
 ```bash
@@ -139,6 +158,23 @@ final provider invoice never exceeds $2 due delayed metering.
 - The manual workflow is a draft PR change and is not yet on the default
   branch; nothing can be dispatched through that workflow until reviewed
   and merged.
+- **November 4 current-quote preparation:** seven original documents were
+  successfully captured from five distinct official source hosts, but not
+  sufficiently distributed across cases:
+
+  | Case | Captured documents | Independent origins in case | Principal remaining hold |
+  |---|---:|---:|---|
+  | Hormuz | 2 (MARAD, EIA) | 2 | Third origin and authorized reporting |
+  | IPO | 2 (SEC Anthropic and SpaceX filings) | 1 | Independent valuation evidence and authorized reporting |
+  | Fed | 1 (BLS CPI) | 1 | Fed HTTP access; rate pass-through primary evidence |
+  | UAP | 2 (NASA FAQ and study page) | 1 | AARO HTTP access; independently sourced challenge |
+
+  The generic HTML date parser was extended conservatively for original EIA
+  release labels, BLS embargo/release headers and SEC filing cover-page dates.
+  This is documentary metadata, not semantic verification or evidence of a
+  current development. All cases retain `coverage_checked: false`, lack an
+  approved independent reporting source, and are therefore **HELD**. The
+  encrypted bundle was not packed and **no inference was purchased**.
 
 Do not claim the pilot was run or its research was verified until the
 actual encrypted results, source provenance and independent human review

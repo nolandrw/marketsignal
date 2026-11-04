@@ -154,18 +154,25 @@ class _ArticleParser(HTMLParser):
         if tag in ("main", "article"):
             self._container += 1
         if tag in (("p", "blockquote", "h1", "h2") if self.require_article else
-                   ("p", "blockquote", "h1", "h2", "h3", "li", "td", "th")) and (self._container or not self.require_article) and not self._skip:
+                   ("p", "blockquote", "h1", "h2", "h3", "li", "td", "th", "pre")) and (self._container or not self.require_article) and not self._skip:
             self._paragraph += 1
             if self._paragraph == 1:
                 self._current = []
 
     def handle_endtag(self, tag: str):
-        if tag in ("p", "blockquote", "h1", "h2", "h3", "li", "td", "th") and self._paragraph:
+        if tag in ("p", "blockquote", "h1", "h2", "h3", "li", "td", "th", "pre") and self._paragraph:
             self._paragraph -= 1
             if self._paragraph == 0 and self._current:
-                text = re.sub(r"\s+", " ", "".join(self._current)).strip()
-                if len(text) >= 35:
-                    self.paragraphs.append(text)
+                # Government legacy releases often place hundreds of lines
+                # in one <pre>. Preserve independently located source lines.
+                parts = ("".join(self._current).splitlines() if tag == "pre" and
+                         not self.require_article else ["".join(self._current)])
+                for part in parts:
+                    text = re.sub(r"\s+", " ", part).strip()
+                    if len(text) >= 35:
+                        self.paragraphs.append(text)
+                    if len(self.paragraphs) >= 1200:
+                        break
                 self._current = []
         if tag in ("main", "article"):
             self._container = max(0, self._container - 1)
@@ -175,6 +182,34 @@ class _ArticleParser(HTMLParser):
     def handle_data(self, data: str):
         if (self._container or not self.require_article) and self._paragraph and not self._skip:
             self._current.append(data)
+
+
+def _official_header_date(raw: str, host: str) -> int | None:
+    """Accept only unmistakable first-party government release/filing labels.
+
+    These are *publisher-origin* dates, never web search, market data or an
+    article's mention of another event. Restrict to the beginning of the
+    document and three named institutional publishing templates.
+    """
+    patterns = {
+        "www.eia.gov": r"\bRelease Date:\s*([A-Z][a-z]+\s+\d{1,2},\s+20\d{2})",
+        "www.bls.gov": (r"\bTransmission of material in this release is embargoed until"
+                        r".{0,140}?([A-Z][a-z]+\s+\d{1,2},\s+20\d{2})"),
+        "www.sec.gov": (r"\bAs filed with the (?:U\.S\. )?Securities and Exchange"
+                        r" Commission on\s+([A-Z][a-z]+\s+\d{1,2},\s+20\d{2})"),
+    }
+    if host not in patterns:
+        return None
+    text = html.unescape(re.sub(r"<[^>]*>", " ", raw[:500_000]))
+    text = re.sub(r"\s+", " ", text)
+    match = re.search(patterns[host], text, flags=re.IGNORECASE)
+    if match is None:
+        return None
+    try:
+        day = datetime.strptime(match.group(1), "%B %d, %Y").date()
+    except ValueError:
+        return None
+    return parse_date(day.isoformat())
 
 
 def _safe_host(url: str, permissions: dict[str, HostPermission]) -> str:
@@ -275,7 +310,13 @@ class SourceCaptureGateway:
 
     def capture(self, lead: ContextLead, *, observed_at: int) -> ArticleCapture:
         host = _safe_host(lead.url, self.permissions)
-        if not 0 < lead.published_at <= observed_at or lead.factual_status != "discovery_only":
+        # Curated original documents may not have a discovery timestamp. In
+        # that case only a publisher-embedded date may authorize the result;
+        # zero is never passed to the trusted first-party feed pathway.
+        eligible_date = (0 < lead.published_at <= observed_at or
+                         lead.published_at == 0 and
+                         lead.publication_date_basis == "date_unknown")
+        if not eligible_date or lead.factual_status != "discovery_only":
             raise CaptureError("Lead date/status is not eligible for capture")
         self._permission(host, lead.url)
         if hasattr(self.transport, "fetch_document"):
@@ -296,6 +337,10 @@ class SourceCaptureGateway:
                 parser.feed(raw)
                 published_at = parse_date(parser.publisher_date)
                 basis = "publisher_page_metadata" if published_at is not None else None
+                if published_at is None and self.permissions[host].kind == "official_record":
+                    published_at = _official_header_date(raw, host)
+                    if published_at is not None:
+                        basis = "publisher_document_header"
                 if published_at is None and trusted_feed_date is not None:
                     published_at, basis = trusted_feed_date, "first_party_official_feed"
                 paragraphs = [html.unescape(p) for p in parser.paragraphs]
@@ -368,7 +413,7 @@ def capture_discovery(packet: ContextDiscoveryPacket, gateway: SourceCaptureGate
         "independent_reporting_included": any(row["kind"] == "independent_reporting" for row in sources),
         "publisher_date_recorded": bool(sources) and all(row["publication_date_basis"] in {
             "publisher_page_metadata", "embedded_json_metadata", "embedded_xml_metadata",
-            "first_party_official_feed"} for row in sources),
+            "first_party_official_feed", "publisher_document_header"} for row in sources),
         "robots_policy_allowed": bool(sources) and all(row["robots_decision"] == "allowed" for row in sources),
         "full_document_digest": bool(sources) and all(len(row["document_sha256"]) == 64 for row in sources),
         "bounded_excerpt_size": bool(sources) and all(45 <= len(row["captured_excerpt"]) <= 370 for row in sources),

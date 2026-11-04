@@ -6,15 +6,63 @@ import io
 import os
 import tarfile
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 from types import SimpleNamespace
 
+from marketsignal.investigator_v3 import ResearchCapture
+from marketsignal.topic_lead import TopicSourceLead
 from scripts import run_research_pilot as pilot
 
 
 class PilotRunnerTests(unittest.TestCase):
+    def test_full_pilot_source_gate_requires_origins_rights_dates_and_hashes(self):
+        as_of = int(time.time())
+        fixtures = [("records.example.gov", "official_record", "primary_record",
+                     "official_public_record"),
+                    ("research.example.edu", "original_research", "primary_record",
+                     "permissioned_short_excerpt"),
+                    ("licensed.example.com", "independent_reporting", "independent_reporting",
+                     "permissioned_short_excerpt")]
+        captures, leads, rows, publishers = [], [], [], []
+        for index, (host, kind, lead_type, rights) in enumerate(fixtures):
+            url = f"https://{host}/public-report-{index}"
+            key = f"ref{index}"
+            capture = ResearchCapture(key, url, host, host, as_of - 86400,
+                                      as_of + 60, kind,
+                                      "Original verified publisher text with a dated source record.",
+                                      document_sha256="a" * 64, content_location="html:paragraph:1",
+                                      mime_type="text/html",
+                                      publication_date_basis="publisher_page_metadata")
+            captures.append(capture)
+            leads.append(TopicSourceLead(key, host, url, host, as_of - 86400,
+                                         lead_type, capture.excerpt))
+            rows.append({"source_id": key, "copyright_basis": rights,
+                         "robots_decision": "allowed"})
+            publishers.append({"host": host, "kind": kind, "copyright_basis": rights})
+        context = SimpleNamespace(as_of=as_of, sources=leads)
+        policy = {"publishers": publishers}
+        pilot.require_complete_source_packet(context, captures, policy, rows)
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            pilot.require_complete_source_packet(context, captures, policy,
+                                                 rows[:2] + [{**rows[2], "robots_decision": "denied"}])
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            pilot.require_complete_source_packet(context, captures[:2] + [
+                ResearchCapture(**{**captures[2].__dict__, "document_sha256": ""})], policy, rows)
+        without_reporting = [ResearchCapture(**{**captures[2].__dict__,
+                                             "source_kind": "original_research"})]
+        altered_policy = {"publishers": publishers[:2] + [{**publishers[2],
+                           "kind": "original_research"}]}
+        altered_leads = leads[:2] + [TopicSourceLead(leads[2].source_id,
+                         leads[2].publisher, leads[2].url, leads[2].origin_key,
+                         leads[2].published_at, "primary_record", leads[2].captured_excerpt)]
+        with self.assertRaisesRegex(ValueError, "licensed reporting"):
+            pilot.require_complete_source_packet(
+                SimpleNamespace(as_of=as_of, sources=altered_leads),
+                captures[:2] + without_reporting, altered_policy, rows)
+
     def test_exact_four_subjects_and_private_paths_required(self):
         for bad in ("../stolen.json", "data/archive/case.json",
                     "data/private/../docs/case.json", "data/private/item.txt"):

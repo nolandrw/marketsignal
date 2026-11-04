@@ -97,6 +97,14 @@ The no-key, no-cost estimate command is:
 python -m marketsignal model-budget-estimate --cases 4
 ```
 
+A fresh, actual four-market Gamma snapshot and partial, date-attributed
+government source packets can be generated locally with
+`python -m scripts.prepare_pilot_evidence`. These are not substituted into
+the November 3 frozen quotes; each new case keeps its actual observation
+time and the genuine missing historical baselines. The producer leaves
+coverage assessment and permissioned reporting incomplete, so a failed
+pilot preflight is the intended outcome until those gaps are addressed.
+
 The illustrative five calls per case × 10,000 input and 2,400 output tokens
 per call produce **$0.146** of model charges at the `gpt-5-mini` rate card
 checked November 4, 2026 ($0.25 per million input; $2.00 per million output;

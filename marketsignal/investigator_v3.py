@@ -184,10 +184,10 @@ def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapt
     metadata = {s.source_id: s for s in context.sources}
     captured = {s.source_id: s for s in captures}
     source_kind_map = {
-        "primary_record": "official_record",
-        "independent_reporting": "independent_reporting",
-        "public_statement": "statement",
-        "social_comment": "social_comment", "market_comment": "market_comment",
+        "primary_record": {"official_record", "original_research"},
+        "independent_reporting": {"independent_reporting"},
+        "public_statement": {"statement"},
+        "social_comment": {"social_comment"}, "market_comment": {"market_comment"},
     }
     if len(captures) != len(captured) or not set(angle.source_ids) <= set(captured):
         raise ValueError("Angle references evidence missing from the capture packet")
@@ -197,7 +197,7 @@ def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapt
                 source.published_at != lead.published_at or
                 source.origin_key != lead.origin_key or
                 source.publisher != lead.publisher or
-                source.source_kind != source_kind_map.get(lead.source_type)):
+                source.source_kind not in source_kind_map.get(lead.source_type, set())):
             raise ValueError("Topic Lead metadata differs from captured evidence")
     coverage = assessment.coverage_analysis + "\n" + "\n".join(
         f"{item.story_id}: {item.title} ({item.overlap})"

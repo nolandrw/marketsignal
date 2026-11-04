@@ -12,6 +12,7 @@ from marketsignal.context_discovery import ContextLead
 from marketsignal.document_ingestion import ExtractionHold, extract_document, parse_date
 from marketsignal.source_capture import (
     CaptureError, FetchedDocument, HostPermission, PublicHTMLTransport, SourceCaptureGateway,
+    _official_header_date,
 )
 
 
@@ -94,6 +95,54 @@ class DocumentIngestionTests(unittest.TestCase):
         self.assertEqual(result.extraction_method, "plain_text")
         with self.assertRaises(CaptureError):
             capture(raw, "text/plain", first_party=False)
+
+    def test_curated_undated_lead_cannot_launder_a_date(self):
+        transport = MemoryDocumentTransport(
+            b'<html><meta name="date" content="2026-10-28"><main>' +
+            b'<p>A complete, publisher-dated original public document explaining a decision and implications.</p>' * 4 +
+            b'</main></html>', "text/html")
+        gateway = SourceCaptureGateway((HostPermission("official.example.org", "official_record",
+                                                      "official_public_record"),), transport)
+        lead = ContextLead("record", "contemporaneous_reporting", URL,
+                           "Original government release", "official.example.org", 0,
+                           publication_date_basis="date_unknown")
+        result = gateway.capture(lead, observed_at=NOW)
+        self.assertEqual(result.publication_date_basis, "publisher_page_metadata")
+        with self.assertRaises(CaptureError):
+            gateway.capture(ContextLead("record", "contemporaneous_reporting", URL,
+                                        "Release", "official.example.org", 0), observed_at=NOW)
+        transport.raw = transport.raw.replace(b'<meta name="date" content="2026-10-28">', b'')
+        with self.assertRaises(CaptureError):
+            gateway.capture(lead, observed_at=NOW)
+
+    def test_first_party_government_release_headers_and_preformatted_text(self):
+        for host, header in (
+            ("www.eia.gov", "Release Date: August 12, 2026"),
+            ("www.bls.gov", "Transmission of material in this release is embargoed until "
+                            "8:30 a.m. (ET) Wednesday, October 14, 2026"),
+            ("www.sec.gov", "As filed with the Securities and Exchange Commission on "
+                            "November 2, 2026"),
+        ):
+            with self.subTest(host=host):
+                original = ("<html><body><pre>" + header + "\n" +
+                            "This original official release provides complete factual information about the event.\n" * 4 +
+                            "</pre></body></html>").encode()
+                self.assertIsNotNone(_official_header_date(original.decode(), host))
+                transport = MemoryDocumentTransport(original, "text/html")
+                gateway = SourceCaptureGateway((HostPermission(host, "official_record",
+                                                              "official_public_record"),), transport)
+                lead = ContextLead("curated", "contemporaneous_reporting",
+                                   f"https://{host}/original", "Official release", host, 0,
+                                   publication_date_basis="date_unknown")
+                result = gateway.capture(lead, observed_at=NOW)
+                self.assertEqual(result.publication_date_basis, "publisher_document_header")
+                self.assertEqual(len(result.excerpts), 3)
+        self.assertIsNone(_official_header_date(
+            "<p>An article mentions that a release date was August 12, 2026.</p>",
+            "www.eia.gov"))
+        self.assertIsNone(_official_header_date(
+            "<p>As filed with the Securities and Exchange Commission on November 2, 2026</p>",
+            "news.example.com"))
 
     def test_general_official_html_fallback_without_article_container(self):
         raw = (b'<html><head><meta property="article:published_time" '
