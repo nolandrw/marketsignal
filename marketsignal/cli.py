@@ -47,6 +47,7 @@ from .topic_lead import (
     TopicLeadAgent, TopicLeadContext, TopicSourceLead, load_topic_context,
 )
 from .oversight import OversightAgent, SyntheticAudiencePanel, grade_agents
+from .copy_preflight import article_digest, check_copy_artifact, prepare_copy_artifact
 
 
 def collect(db_file: str, max_markets: int, max_pages: int,
@@ -231,9 +232,13 @@ def newsroom_v3_demo() -> dict:
         move("editorial_review", "fictional_draft_ready", "writer")
         story.editorial_review_passed = not generated.issue_codes
         move("copy_editing", "structural_editor_acceptance", "chief_editor")
-        story.copy_review_passed = bool(generated.article.source_urls and
-                                        dossier.editorial_selection and
-                                        generated.article.headline == dossier.editorial_selection.headline)
+        # This is a deterministic copy-link preflight, not a model pretending
+        # it has licensed images, formatted HTML or fact-checked a new draft.
+        copy_artifact = prepare_copy_artifact(generated.article, dossier.documents)
+        copy_issues = check_copy_artifact(generated.article, dossier.documents, copy_artifact)
+        story.article_sha256 = article_digest(generated.article)
+        story.copy_article_sha256 = copy_artifact.approved_article_sha256
+        story.copy_review_passed = not copy_issues
         move("audience_review", "fictional_citation_layout", "copy_editor")
         # The panel is explicitly a readability/provenance heuristic, not
         # simulated people with meaningful taste or newsroom judgment.
@@ -261,6 +266,10 @@ def newsroom_v3_demo() -> dict:
                                         "paragraph_count": len(draft.paragraphs),
                                         "source_count": len(dossier.documents),
                                         "semantic_factcheck_passed": False},
+                  "copy_preflight": {"status": "passed" if not copy_issues else "held",
+                                     "issues": copy_issues,
+                                     "rendered_html": False,
+                                     "images_licensed": False},
                   "audience_panel": audience,
                   "oversight": [p.to_dict() for p in OversightAgent().assess(ledger.metrics())]}
     return result
