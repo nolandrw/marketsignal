@@ -9,6 +9,7 @@ from marketsignal.copy_preflight import (
     CopyImage, CopyLink, article_digest, check_copy_artifact, prepare_copy_artifact,
 )
 from marketsignal.feature_demo import fictional_feature_fixture
+from marketsignal.handoff_oversight import HandoffIssue, HandoffReviewResult
 from marketsignal.newsroom_control import (
     ClaimReview, ResearchTicket, StoryLedger, StoryState, TopicRubric,
     WorkflowController, accept_structural_dossier, story_id,
@@ -34,6 +35,9 @@ class NewsroomControlTests(unittest.TestCase):
         self.assertEqual(demo["audience_panel"]["issues"], [])
         self.assertEqual(demo["copy_preflight"]["status"], "passed")
         self.assertFalse(demo["copy_preflight"]["images_licensed"])
+        self.assertEqual(demo["investigator_v3"]["disposition"], "ready_for_verifier")
+        self.assertEqual(demo["handoff_overseer"]["status"], "to_verifier")
+        self.assertFalse(demo["handoff_overseer"]["independent_human_review"])
 
     def test_illegal_transition_and_direct_release_fail_closed(self):
         story = new_story()
@@ -42,6 +46,34 @@ class NewsroomControlTests(unittest.TestCase):
         WorkflowController.advance(story, "triaged", reason="valid movement")
         with self.assertRaises(ValueError):
             WorkflowController.advance(story, "drafting", reason="skip research")
+
+    def test_investigator_v3_requires_overseer_for_verifier_handoff(self):
+        story = new_story()
+        story.topic_score, story.topic_decision = 80, "go"
+        for target in ("triaged", "topic_review", "investigating"):
+            WorkflowController.advance(story, target, reason="test")
+        report = {"case_id": story.story_id, "disposition": "ready_for_verifier",
+                  "publication_enabled": False}
+        review = HandoffReviewResult(story.story_id, "awaiting_independent_review",
+                                     (HandoffIssue("", "no_reviewer", "", "Check source"),),
+                                     0, "unavailable")
+        WorkflowController.advance_investigator_v3(story, report, review)
+        self.assertEqual(story.state, "held")
+        second = new_story()
+        second.topic_score, second.topic_decision = 80, "go"
+        for target in ("triaged", "topic_review", "investigating"):
+            WorkflowController.advance(second, target, reason="test")
+        with self.assertRaises(ValueError):
+            WorkflowController.advance_investigator_v3(
+                second, {"case_id": "another_case", "disposition": "ready_for_verifier",
+                         "publication_enabled": False}, review)
+        approved = HandoffReviewResult(second.story_id, "to_verifier", (), 4, "separate_model")
+        WorkflowController.advance_investigator_v3(second,
+                                                  {"case_id": second.story_id,
+                                                   "disposition": "ready_for_verifier",
+                                                   "publication_enabled": False},
+                                                  approved)
+        self.assertEqual(second.state, "verifying")
 
     def test_research_budget_blocks_runaway_loops(self):
         story = new_story()
