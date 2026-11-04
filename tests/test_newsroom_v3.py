@@ -1,16 +1,20 @@
 import sqlite3
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from marketsignal.cli import newsroom_v3_demo
+from marketsignal.copy_preflight import (
+    CopyImage, CopyLink, article_digest, check_copy_artifact, prepare_copy_artifact,
+)
 from marketsignal.feature_demo import fictional_feature_fixture
 from marketsignal.newsroom_control import (
     ClaimReview, ResearchTicket, StoryLedger, StoryState, TopicRubric,
     WorkflowController, accept_structural_dossier, story_id,
 )
 from marketsignal.oversight import (
-    AudienceFeedback, OversightAgent, SyntheticAudiencePanel, grade_agents,
+    AudienceFeedback, IndependentEvaluation, OversightAgent, SyntheticAudiencePanel, grade_agents,
 )
 
 
@@ -28,6 +32,8 @@ class NewsroomControlTests(unittest.TestCase):
         self.assertFalse(demo["publication_enabled"])
         self.assertIn("release_review", demo["audit_handoffs"])
         self.assertEqual(demo["audience_panel"]["issues"], [])
+        self.assertEqual(demo["copy_preflight"]["status"], "passed")
+        self.assertFalse(demo["copy_preflight"]["images_licensed"])
 
     def test_illegal_transition_and_direct_release_fail_closed(self):
         story = new_story()
@@ -120,6 +126,64 @@ class NewsroomControlTests(unittest.TestCase):
             WorkflowController.advance(state, "approved_for_manual_release",
                                        reason="model says yes", owner_authorized=False)
 
+    def test_release_cannot_be_self_approved_or_published_on_a_boolean(self):
+        story = new_story()
+        story.state = "release_review"
+        story.semantic_review_passed = True
+        story.risk = "low"
+        story.dossier_audited = True
+        story.editorial_review_passed = True
+        story.copy_review_passed = True
+        story.audience_review_recorded = True
+        story.article_sha256 = "a" * 64
+        story.copy_article_sha256 = "a" * 64
+        # Even all model-controlled pass flags cannot reach owner approval.
+        with self.assertRaises(ValueError):
+            WorkflowController.advance(story, "pending_owner_approval", reason="no human review")
+        story.human_factcheck_reference = "human-review-case-37"
+        story.factchecked_article_sha256 = "b" * 64
+        with self.assertRaises(ValueError):
+            WorkflowController.advance(story, "pending_owner_approval", reason="reviewed stale draft")
+        story.factchecked_article_sha256 = "a" * 64
+        WorkflowController.advance(story, "pending_owner_approval", reason="reviewed current version")
+        with self.assertRaises(ValueError):
+            WorkflowController.advance(story, "approved_for_manual_release", reason="no owner", owner_authorized=False)
+
+    def test_copy_stage_requires_editor_approved_article_fingerprint(self):
+        story = new_story()
+        story.state = "copy_editing"
+        story.copy_review_passed = True
+        story.article_sha256 = "a" * 64
+        story.copy_article_sha256 = "b" * 64
+        with self.assertRaises(ValueError):
+            WorkflowController.advance(story, "audience_review", reason="tampered")
+        story.copy_article_sha256 = story.article_sha256
+        WorkflowController.advance(story, "audience_review", reason="matching article")
+
+    def test_copy_layout_must_not_change_editor_approved_text(self):
+        candidate, dossier = fictional_feature_fixture()
+        from marketsignal.feature_story import FeatureNewsroom
+        output = FeatureNewsroom().run(candidate, dossier)
+        self.assertIsNotNone(output.article)
+        draft = output.article
+        artifact = prepare_copy_artifact(draft, dossier.documents)
+        self.assertEqual(check_copy_artifact(draft, dossier.documents, artifact), ())
+        modified = replace(artifact, headline="Edited into an unsupported allegation")
+        self.assertIn("copy_modified_editor_approved_prose",
+                      check_copy_artifact(draft, dossier.documents, modified))
+        self.assertEqual(artifact.approved_article_sha256, article_digest(draft))
+        self.assertTrue(artifact.links)
+        altered = replace(artifact, links=(CopyLink(artifact.links[0].source_id,
+                                "https://another.example/?affiliate=me"),) + artifact.links[1:])
+        self.assertIn("altered_or_unsafe_source_link",
+                      check_copy_artifact(draft, dossier.documents, altered))
+        unlicensed = replace(artifact, images=(CopyImage("https://img.example/a.jpg", "Flood", "", ""),))
+        self.assertIn("unlicensed_or_unattributed_image",
+                      check_copy_artifact(draft, dossier.documents, unlicensed))
+        malformed = replace(artifact, images=(CopyImage("https://[bad", "Flood", "X", "record"),))
+        self.assertIn("unlicensed_or_unattributed_image",
+                      check_copy_artifact(draft, dossier.documents, malformed))
+
     def test_ledger_is_append_only_and_tamper_evident(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "private.db"
@@ -163,16 +227,35 @@ class OversightTests(unittest.TestCase):
                    "agents": {"verifier": {"quality_fail": 10, "quality_pass": 20,
                                             "source_timeout": 6}}}
         proposals = OversightAgent().assess(metrics)
-        self.assertEqual({p.tranche for p in proposals}, {"automatic", "bespoke"})
+        self.assertEqual({p.tranche for p in proposals}, {"automatic"})
         auto = next(p for p in proposals if p.tranche == "automatic")
         updated = OversightAgent().apply_automatic({"source_retry_backoff_seconds": 0.25}, auto)
         self.assertEqual(updated["source_retry_backoff_seconds"], .5)
+        # Internal quality_pass/fail reason codes are not external labels.
+        self.assertEqual(grade_agents(metrics)["verifier"]["grade"], "unrated")
+        editorial_labels = [IndependentEvaluation(str(i), "verifier", i >= 10,
+                            "senior_editor", f"review-{i}", "editorial-rubric-v1")
+                            for i in range(30)]
+        proposals = OversightAgent().assess(metrics, editorial_labels)
+        self.assertEqual({p.tranche for p in proposals}, {"automatic", "bespoke"})
         with self.assertRaises(ValueError):
             OversightAgent().apply_automatic({}, next(p for p in proposals if p.tranche == "bespoke"))
-        grades = grade_agents(metrics)
-        self.assertEqual(grades["verifier"]["grade"], "D")
+        grades = grade_agents(metrics, evaluations=editorial_labels)
+        self.assertEqual(grades["verifier"]["grade"], "unrated")
+        self.assertEqual(grades["verifier"]["indicative_unverified_grade"], "D")
+        self.assertFalse(grades["verifier"]["authentication_integrated"])
         self.assertEqual(grade_agents({"agents": {"writer": {"quality_pass": 3}}})["writer"]["grade"],
                          "unrated")
+
+    def test_oversight_rejects_duplicate_and_synthetic_grade_laundering(self):
+        eval1 = IndependentEvaluation("story-a", "writer", False, "editor", "review-a", "rubric-1")
+        with self.assertRaises(ValueError):
+            grade_agents({}, evaluations=[eval1, eval1])
+        with self.assertRaises(ValueError):
+            IndependentEvaluation("story-a", "writer", True, "writer", "review-a", "rubric-1")
+        with self.assertRaises(ValueError):
+            IndependentEvaluation("story-a", "writer", True, "editor", "review-a", "rubric-1",
+                                  source="synthetic")
 
 
 if __name__ == "__main__":
