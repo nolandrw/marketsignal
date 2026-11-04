@@ -101,6 +101,38 @@
     "Which engineering results materially changed?",
     "Who will oversee the next safety review?"
   ],
+  "story_pitches": [
+    {
+      "pitch_id": "storm-delay",
+      "working_headline": "Fictional Coastal Town Reconsiders the Timeline for Its Seawall",
+      "thesis": "A delayed seawall hearing places fictional residents' preparations for the next storm season in doubt.",
+      "conflict": "The council needs time to examine foundations while shoreline residents remain concerned about flooding.",
+      "surprise": "The initial review had seemed sufficient for an early decision until additional foundation questions arose.",
+      "why_now": "The fictional council has postponed the upcoming hearing in response to a new review process.",
+      "stakes": "A delay changes when worried shoreline residents may receive the barrier's promised protection.",
+      "original_value": "The angle ties a specific institutional decision to its stakes for residents rather than a betting-market number.",
+      "supporting_claim_ids": ["development", "expectation", "stakeholders", "possible_cause"],
+      "contrary_claim_ids": ["contrary"]
+    },
+    {
+      "pitch_id": "engineering-risk",
+      "working_headline": "Fictional Harbor Engineers Revisit an Unfinished Safety Question",
+      "thesis": "A reconsidered seawall approval raises unresolved technical questions but no proof of a dangerous design.",
+      "conflict": "Some residents need assurance of safety while the study has not found the proposed barrier unsafe.",
+      "surprise": "The council has delayed a hearing even though the study stops short of identifying a failed design.",
+      "why_now": "The newly announced foundation review provides a concrete reason to examine the engineering concerns.",
+      "stakes": "The fictional community could face another winter storm season with questions about its planned defenses.",
+      "original_value": "This investigative angle would require more technical evidence before asserting that a design problem exists.",
+      "supporting_claim_ids": ["development", "expectation", "stakeholders", "possible_cause"],
+      "contrary_claim_ids": ["contrary"]
+    }
+  ],
+  "editorial_selection": {
+    "selected_pitch_id": "storm-delay",
+    "headline": "Fictional Coastal Town Reconsiders the Timeline for Its Seawall",
+    "rationale": "The delayed hearing is documented within the fictional fixture and connects to resident stakes. The safety-risk alternative remains too speculative to anchor an article.",
+    "evidence_review": "provisional_shadow"
+  },
   "article": {
     "headline": "Fictional Coastal Town Reconsiders the Timeline for Its Seawall",
     "deck": "A made-up article tests how an evidence dossier moves through a guarded newsroom.",
