@@ -162,7 +162,8 @@ def newsroom_v3_demo() -> dict:
         story.editorial_review_passed = not generated.issue_codes
         move("copy_editing", "structural_editor_acceptance", "chief_editor")
         story.copy_review_passed = bool(generated.article.source_urls and
-                                        generated.article.headline == dossier.proposed_headline)
+                                        dossier.editorial_selection and
+                                        generated.article.headline == dossier.editorial_selection.headline)
         move("audience_review", "fictional_citation_layout", "copy_editor")
         # The panel is explicitly a readability/provenance heuristic, not
         # simulated people with meaningful taste or newsroom judgment.
