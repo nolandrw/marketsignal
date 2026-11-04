@@ -18,6 +18,8 @@ from .agent_sources import BlueskySearch, GDELTSearch, PolymarketHistory, Public
 from .editorial import Candidate, EditorialPipeline
 from .feature_demo import demo_feature
 from .field_trial import audit_case, load_case, render_shadow
+from .editorial_loop import CaseReplayModel, EditorialShadowLoop, render_loop_report
+from .model_gateway import ResponsesJSONModel, ModelUnavailable
 from .feature_demo import fictional_feature_fixture
 from .feature_story import FeatureNewsroom, assign_reporting_from_archive
 from .context_discovery import discover_archive as discover_context_archive
@@ -256,6 +258,12 @@ def main(argv: list[str] | None = None) -> int:
     field = commands.add_parser("field-trial", help="Audit a real-topic curated evidence case and render a held shadow article")
     field.add_argument("--case", required=True)
     field.add_argument("--out", default="reports/field-trial.md")
+    shadow = commands.add_parser("shadow-loop", help="Bounded investigator/verifier/editor/writer pipeline; never publishes")
+    shadow.add_argument("--case", required=True, help="Curated, dated source-excerpt case JSON")
+    shadow.add_argument("--out", default="reports/editorial-loop.md")
+    shadow.add_argument("--trace", default="reports/editorial-loop.json")
+    shadow.add_argument("--mode", choices=("replay", "openai"), default="replay")
+    shadow.add_argument("--model", default="gpt-5-mini", help="Only used with --mode openai; API charges may apply")
     train = commands.add_parser("train-ranker", help="Train inactive ML challenger on verified human labels")
     train.add_argument("--labels", required=True)
     train.add_argument("--model-out", default="data/private/news-ranker-challenger.json")
@@ -319,6 +327,39 @@ def main(argv: list[str] | None = None) -> int:
                           "structural_audit": audit, "independent_factcheck": False,
                           "publication_enabled": False}, indent=2))
         return 0
+    if arguments.command == "shadow-loop":
+        # Explicit opt-in to the paid provider. No hidden calls or publishing.
+        paths = (Path(arguments.out), Path(arguments.trace))
+        if (paths[0].suffix != ".md" or paths[1].suffix != ".json" or
+                any(not p.parts or any(item in ("site", "archive", "docs", "examples", "tests")
+                                        for item in p.parts) or
+                    not ("reports" in p.parts or "private" in p.parts)
+                    for p in paths)):
+            parser.error("Shadow loop outputs must be private reports/ or data/private/ artifacts")
+        case = load_case(arguments.case)
+        try:
+            model = (CaseReplayModel(case) if arguments.mode == "replay" else
+                     ResponsesJSONModel(arguments.model))
+        except ModelUnavailable:
+            print(json.dumps({"status": "research_hold", "reason": "model_credential_unavailable",
+                              "publication_enabled": False}))
+            return 1
+        run = EditorialShadowLoop(model).run(case)
+        for path in paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        paths[0].write_text(render_loop_report(case, run), encoding="utf-8")
+        paths[1].write_text(json.dumps({"case_id": case["case_id"],
+                                      "mode": arguments.mode,
+                                      "result": run.to_dict()}, indent=2), encoding="utf-8")
+        print(json.dumps({"status": run.status, "reason": run.disposition_reason,
+                          "case_id": case["case_id"], "mode": arguments.mode,
+                          "stage_calls": run.model_calls,
+                          "editor_provisional_score": run.final_editorial_score,
+                          "quality_provisional_score": run.quality_score,
+                          "independent_quality_certified": False,
+                          "publication_enabled": False,
+                          "report": str(paths[0]), "trace": str(paths[1])}, indent=2))
+        return 0 if run.article else 1
     if arguments.command == "train-ranker":
         model = train_challenger(load_human_labels(arguments.labels))
         if "site" in Path(arguments.model_out).parts or "archive" in Path(arguments.model_out).parts:

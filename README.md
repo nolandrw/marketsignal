@@ -1,9 +1,9 @@
 # MarketSignal — Autonomous Market Intelligence
 
 **Status: $0 daily GitHub Actions / Pages site is deployed; a bounded public-source
-Narrative Scout, Evidence Investigator, editorial workflow and measured
-synthetic shadow evaluation are implemented. AI-authored news and paid cloud
-hosting are NOT activated.**
+Narrative Scout, Evidence Investigator, editorial workflow, an opt-in structured
+model-backed shadow loop and deterministic shadow evaluations are implemented.
+Paid model inference and publication are NOT activated automatically.**
 
 **Editorial product direction:** MarketSignal aims to be a general-interest
 newspaper informed by prediction-market leads, **not** a site of odds-movement
@@ -48,6 +48,7 @@ python -m marketsignal source-smoke --archive-dir data/archive
 python -m marketsignal investigate-archive --archive-file data/archive/2026-11-03.json
 python -m marketsignal newsroom-v3-demo
 python -m marketsignal field-trial --case data/private/your_research_case.json --out reports/field-trial.md
+python -m marketsignal shadow-loop --mode replay --case tests/fixtures/fictional_field_trial.json --out reports/editorial-loop.md --trace reports/editorial-loop.json
 python -m marketsignal quantitative-report --archive-file data/archive/2026-11-03.json
 # Optional manual, bounded source checks and history capture:
 python -m marketsignal kalshi-sample --max-pages 1
@@ -123,6 +124,16 @@ suppression window per market.
   or certify semantic truth; the real article body is held outside public Git
   and never included in the public site. A fictional fixture runs in CI. See
   [field trial](docs/field-trial.md) and [story thesis gate](docs/story-thesis-v1.md).
+- An executable source-evidence-to-story **shadow loop** with separate
+  investigator, adversarial pitch verifier, chief editor, writer, paragraph
+  verifier and quality reviewer. Bounded feedback, exact citation checks,
+  deterministic gates and an audit trace are exercised using a recorded
+  source-backed replay. A strict structured-output Responses API adapter is
+  available **only with explicit opt-in and a configured key**; it is not
+  provisioned or quality-certified. The Texas replay passes mechanical
+  handoff coverage but holds at a provisional **75/100** article-quality
+  score, with independent quality and fact checks unmeasured. See the
+  [executable agentic loop](docs/agentic-shadow-loop.md).
 - Bounded historical-context discovery across prior, recent and broader
   reporting windows (GDELT metadata only), triggered in daily shadow runs
   and recorded as sanitized counts, with no claim that a news hit is verified.
@@ -136,9 +147,10 @@ suppression window per market.
 - A provisioned hosted database or paging alerts.
 - Automatically scheduled backfilled history, orderbook spread validation, or
   validated statistical significance / topic-level threshold calibration.
-- Actual model-powered research/writing, independent full-text verification,
-  human-rated real-world editorial evaluation and article publication. Source
-  **discovery** exists, but discovery is not fact-checking.
+- **Activated real model-powered research/writing** (the opt-in model adapter
+  exists but credentials/provider access have not been exercised), independent
+  full-text verification, human-rated editorial evaluation or publication.
+  Source **discovery** exists, but discovery is not fact-checking.
 - Automatic primary-source/full-text collection across subjects, real-world
   context packets, professional semantic review and unattended newspaper
   articles. The local feature demo's data is synthetic, not live reporting.
