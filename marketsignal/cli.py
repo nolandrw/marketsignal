@@ -15,11 +15,14 @@ from .daily import run_daily
 from .detection import detect_signals
 from .agent_evals import evaluate_shadow
 from .agent_sources import BlueskySearch, GDELTSearch, PolymarketHistory, PublicJSONTransport
-from .editorial import Candidate, EditorialPipeline
+from .editorial import Candidate, EditorialPipeline, TriageAgent
 from .feature_demo import demo_feature
 from .field_trial import audit_case, load_case, render_shadow
 from .editorial_loop import CaseReplayModel, EditorialShadowLoop, render_loop_report
 from .model_gateway import ResponsesJSONModel, ModelUnavailable
+from .source_capture import (HostPermission, SourceCaptureGateway, capture_discovery)
+from .research_case import ReportingCaseBuilder
+from .context_discovery import ContextDiscoveryAgent
 from .feature_demo import fictional_feature_fixture
 from .feature_story import FeatureNewsroom, assign_reporting_from_archive
 from .context_discovery import discover_archive as discover_context_archive
@@ -264,6 +267,16 @@ def main(argv: list[str] | None = None) -> int:
     shadow.add_argument("--trace", default="reports/editorial-loop.json")
     shadow.add_argument("--mode", choices=("replay", "openai"), default="replay")
     shadow.add_argument("--model", default="gpt-5-mini", help="Only used with --mode openai; API charges may apply")
+    capture = commands.add_parser("capture-context", help="Discover then read only explicitly approved publisher pages; private excerpts")
+    capture.add_argument("--archive-file", required=True)
+    capture.add_argument("--policy-file", required=True, help="JSON of explicitly permissioned publisher hosts")
+    capture.add_argument("--out", default="data/private/captured-context.json")
+    capture.add_argument("--max-pages", type=int, default=4)
+    assemble = commands.add_parser("assemble-research-case", help="Opt-in model extraction of source-linked claims; never publishes")
+    assemble.add_argument("--capture-file", required=True)
+    assemble.add_argument("--case-id", required=True)
+    assemble.add_argument("--out", default="data/private/working-research-case.json")
+    assemble.add_argument("--model", default="gpt-5-mini")
     train = commands.add_parser("train-ranker", help="Train inactive ML challenger on verified human labels")
     train.add_argument("--labels", required=True)
     train.add_argument("--model-out", default="data/private/news-ranker-challenger.json")
@@ -360,6 +373,76 @@ def main(argv: list[str] | None = None) -> int:
                           "publication_enabled": False,
                           "report": str(paths[0]), "trace": str(paths[1])}, indent=2))
         return 0 if run.article else 1
+    if arguments.command == "capture-context":
+        if not 1 <= arguments.max_pages <= 10:
+            parser.error("--max-pages must be 1..10")
+        output = Path(arguments.out)
+        if output.suffix != ".json" or "private" not in output.parts or "site" in output.parts:
+            parser.error("Source captures must remain in a private JSON file")
+        policy_raw = json.loads(Path(arguments.policy_file).read_text(encoding="utf-8"))
+        if (not isinstance(policy_raw, list) or not 1 <= len(policy_raw) <= 30 or
+                any(not isinstance(row, dict) or
+                    set(row) != {"host", "kind", "copyright_basis"} for row in policy_raw)):
+            parser.error("Publisher policy must be a bounded allowlist")
+        gateway = SourceCaptureGateway(tuple(HostPermission(**row) for row in policy_raw))
+        archive = json.loads(Path(arguments.archive_file).read_text(encoding="utf-8"))
+        if archive.get("schema_version") != 1 or not isinstance(archive.get("signals"), list):
+            parser.error("Invalid immutable market archive")
+        markets = {row["market_id"]: Market(**row) for row in archive.get("markets", [])}
+        selected = next((Candidate(markets[raw["market_id"]], Signal(**raw))
+                         for raw in archive["signals"] if raw["market_id"] in markets), None)
+        if selected is None:
+            print(json.dumps({"status": "no_qualifying_market_signal", "captured": 0,
+                              "publication_enabled": False}))
+            return 0
+        news = GDELTSearch(PublicJSONTransport(timeout=20, retries=0))
+        packet = ContextDiscoveryAgent(news).discover(selected)
+        results = capture_discovery(packet, gateway,
+                                    observed_at=selected.signal.observed_at,
+                                    max_pages=arguments.max_pages)
+        results["market_reference"] = {
+            "market_id": selected.market.market_id,
+            "question": selected.market.question,
+            "observed_at": selected.signal.observed_at,
+            "yes_price": selected.signal.current_price,
+            "previous_price": selected.signal.previous_price,
+            "change_pp": selected.signal.change_pp,
+            "volume_24h": selected.signal.volume_24h,
+            "signal_detected": not bool(TriageAgent().check(selected)),
+            "movement_claimed": False,
+        }
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(results, indent=2), encoding="utf-8")
+        print(json.dumps({"status": "captured_private_source_excerpts",
+                          "candidate_id": results["candidate_id"],
+                          "capture_counts": results["capture_counts"],
+                          "claims_verified": False, "publication_enabled": False,
+                          "file": str(output)}, indent=2))
+        return 0
+    if arguments.command == "assemble-research-case":
+        output = Path(arguments.out)
+        if output.suffix != ".json" or "private" not in output.parts or "site" in output.parts:
+            parser.error("Extracted research case must remain private")
+        captured = json.loads(Path(arguments.capture_file).read_text(encoding="utf-8"))
+        if "market_reference" not in captured:
+            parser.error("Capture packet does not include market provenance")
+        try:
+            model = ResponsesJSONModel(arguments.model)
+        except ModelUnavailable:
+            print(json.dumps({"status": "research_hold", "reason": "model_credential_unavailable",
+                              "publication_enabled": False}))
+            return 1
+        assembly = ReportingCaseBuilder(model).build(
+            captured, case_id=arguments.case_id, market_reference=captured["market_reference"])
+        if assembly.case:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(json.dumps(assembly.case, indent=2), encoding="utf-8")
+        print(json.dumps({"status": assembly.status, "reason": assembly.reason,
+                          "claim_extraction_calls": assembly.model_calls,
+                          "publication_enabled": False,
+                          "case_written": bool(assembly.case),
+                          "case_path": str(output) if assembly.case else None}, indent=2))
+        return 0 if assembly.case else 1
     if arguments.command == "train-ranker":
         model = train_challenger(load_human_labels(arguments.labels))
         if "site" in Path(arguments.model_out).parts or "archive" in Path(arguments.model_out).parts:
