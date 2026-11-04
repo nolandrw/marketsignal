@@ -24,6 +24,8 @@ from .source_capture import (HostPermission, SourceCaptureGateway, capture_disco
 from .research_case import ReportingCaseBuilder
 from .context_discovery import ContextDiscoveryAgent
 from .feature_demo import fictional_feature_fixture
+from .fictional_investigator_v3 import run_fictional_v3_handoff
+from .research_runtime import load_seed_captures, run_research_shadow
 from .feature_story import FeatureNewsroom, assign_reporting_from_archive
 from .context_discovery import discover_archive as discover_context_archive
 from .gamma import GammaError, discover_markets
@@ -218,8 +220,19 @@ def newsroom_v3_demo() -> dict:
             ledger.record(story, agent, reason)
 
         ledger.record(story, "quantitative_triage", "synthetic_candidate")
-        for stage in ("triaged", "topic_review", "investigating", "verifying"):
+        for stage in ("triaged", "topic_review", "investigating"):
             move(stage, "fictional_workflow_test", "workflow_controller")
+        investigation_v3, handoff_review = run_fictional_v3_handoff(context, topic,
+                                                                  dossier.documents)
+        WorkflowController.advance_investigator_v3(story, investigation_v3, handoff_review)
+        ledger.record(story, "handoff_overseer", "investigator_v3_overseen"
+                      if story.state == "verifying" else "investigator_v3_blocked",
+                      {"review_status": handoff_review.status,
+                       "issue_count": len(handoff_review.issues),
+                       "first_issue": handoff_review.issues[0].reason_code
+                       if handoff_review.issues else "none"})
+        if story.state != "verifying":
+            raise AssertionError("Fictional Investigator v3 handoff did not pass its test")
         structural_issues = accept_structural_dossier(story, candidate, dossier)
         if structural_issues:
             raise AssertionError("Fictional dossier no longer satisfies structural gate")
@@ -258,6 +271,17 @@ def newsroom_v3_demo() -> dict:
                                  "reason_codes": topic.reason_codes,
                                  "angles": len(topic.angles),
                                  "scripted_replay": True},
+                  "investigator_v3": {"disposition": investigation_v3["disposition"],
+                                      "preliminary_score": investigation_v3["preliminary_rubric"]["total"],
+                                      "completed_score": investigation_v3["completed_rubric"]["total"],
+                                      "research_queries": len(investigation_v3["research_queries"]),
+                                      "unverified_lead_counts": investigation_v3["discovery_lead_counts"],
+                                      "scripted_replay": True,
+                                      "uses_live_public_sources": False},
+                  "handoff_overseer": {"status": handoff_review.status,
+                                       "issues": [issue.reason_code for issue in handoff_review.issues],
+                                       "review_kind": handoff_review.review_kind,
+                                       "independent_human_review": False},
                   "owner_approval_required": True,
                   "publication_enabled": False, "audit_chain_valid": ledger.verify_chain(story.story_id),
                   "audit_handoffs": [entry["state"] for entry in ledger.events(story.story_id)],
@@ -341,6 +365,14 @@ def main(argv: list[str] | None = None) -> int:
     topic.add_argument("--context-file", required=True, help="Private source/excerpt packet")
     topic.add_argument("--out", default="data/private/topic-lead-assessment.json")
     topic.add_argument("--model", default="gpt-5-mini", help="Explicit paid model choice")
+    research = commands.add_parser(
+        "research-v3-shadow", help="Opt-in public research + Investigator v3 + overseer; never publishes")
+    research.add_argument("--context-file", required=True, help="Private Topic Lead context")
+    research.add_argument("--captures-file", required=True, help="Matching trusted seed captures")
+    research.add_argument("--policy-file", required=True, help="Approved publisher/feed policy JSON")
+    research.add_argument("--angle-id", required=True, help="Explicit selected Topic Lead angle")
+    research.add_argument("--out", default="data/private/investigator-v3-shadow.json")
+    research.add_argument("--model", default="gpt-5-mini", help="Opt-in API model; may incur charges")
     field = commands.add_parser("field-trial", help="Audit a real-topic curated evidence case and render a held shadow article")
     field.add_argument("--case", required=True)
     field.add_argument("--out", default="reports/field-trial.md")
@@ -428,6 +460,32 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"status": result.disposition, "topic_score": result.score,
                           "reason_codes": result.reason_codes, "private_report": str(output),
                           "publication_enabled": False}, indent=2))
+        return 0
+    if arguments.command == "research-v3-shadow":
+        output = Path(arguments.out)
+        if (output.suffix != ".json" or "private" not in output.parts or
+                any(part in {"site", "archive", "docs", "tests", "examples"}
+                    for part in output.parts)):
+            parser.error("Research outputs must remain private JSON artifacts")
+        try:
+            context = load_topic_context(arguments.context_file)
+            captures = load_seed_captures(arguments.captures_file)
+            policy_file = Path(arguments.policy_file)
+            if policy_file.stat().st_size > 64_000:
+                raise ValueError("Oversized source policy")
+            policy = json.loads(policy_file.read_text(encoding="utf-8"))
+            result = run_research_shadow(context, captures, angle_id=arguments.angle_id,
+                                         research_policy=policy,
+                                         model=ResponsesJSONModel(arguments.model))
+        except (OSError, ValueError, KeyError, TypeError, ModelUnavailable,
+                RuntimeError, TimeoutError) as exc:
+            print(json.dumps({"status": "research_hold", "reason": type(exc).__name__,
+                              "publication_enabled": False}))
+            return 1
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        print(json.dumps({"status": result["status"], "case_id": result["case_id"],
+                          "private_output": str(output), "publication_enabled": False}))
         return 0
     if arguments.command == "field-trial":
         case = load_case(arguments.case)
