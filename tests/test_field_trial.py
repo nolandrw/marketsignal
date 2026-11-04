@@ -25,6 +25,26 @@ class FieldTrialTests(unittest.TestCase):
         self.assertIn("SHADOW REPORT", article)
         self.assertIn("## Sources and outstanding checks", article)
         self.assertIn("No qualifying movement was observed", article)
+        self.assertIn("Editorial story spine", article)
+
+    def test_missing_thesis_handoff_blocks_shadow_story(self):
+        broken = copy.deepcopy(self.case)
+        del broken["story_pitches"]
+        self.assertFalse(audit_case(broken)["checks"]["story_thesis_selection"])
+        with self.assertRaises(ValueError):
+            render_shadow(broken)
+
+    def test_selected_headline_is_editor_owned_not_writer_freeform(self):
+        broken = copy.deepcopy(self.case)
+        broken["article"]["headline"] = "A New Story Not Reviewed by the Fictional Editor"
+        self.assertFalse(audit_case(broken)["checks"]["story_thesis_selection"])
+
+    def test_weak_question_as_headline_is_blocked(self):
+        broken = copy.deepcopy(self.case)
+        headline = "A Seawall Delay Raises a Question No One Can Answer"
+        broken["article"]["headline"] = headline
+        broken["editorial_selection"]["headline"] = headline
+        self.assertFalse(audit_case(broken)["checks"]["story_thesis_selection"])
 
     def test_future_source_fails_as_of_integrity(self):
         broken = copy.deepcopy(self.case)
