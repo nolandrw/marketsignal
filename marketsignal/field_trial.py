@@ -14,6 +14,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from .story_thesis import (
+    audit_story_selection, parse_editorial_selection, parse_story_pitches,
+)
+
 
 ROLES = {
     "new_development", "prior_expectations", "explanation", "stakes",
@@ -24,7 +28,7 @@ SHAKEOUT_RULES = (
     "no_real_market_change_assumed", "valid_source_metadata", "no_future_sources",
     "distinct_source_origins", "source_linked_claims", "uncertainty_and_counterpoint",
     "paragraph_evidence_linkage", "quote_text_provenance", "market_secondary_headline",
-    "human_release_gate_disabled",
+    "story_thesis_selection", "human_release_gate_disabled",
 )
 
 
@@ -60,7 +64,7 @@ def load_case(path: str | Path) -> dict:
 
 
 def audit_case(case: dict) -> dict:
-    """Structural rubric: 10 independently inspectable controls, 10 points each.
+    """Structural rubric: independently inspectable controls, scaled to 100.
 
     A 100/100 means ONLY this technical fixture passed its structural contract;
     accuracy, unbiased framing and newsworthiness remain unmeasured.
@@ -134,6 +138,17 @@ def audit_case(case: dict) -> dict:
                           article["headline"], re.I) and
             len(rendered.split()) >= 200 and
             "market_context" not in {c["role"] for c in claims[:2]})
+        pitches = parse_story_pitches(case.get("story_pitches"))
+        selection = parse_editorial_selection(case.get("editorial_selection"))
+        pitch_issues = audit_story_selection(
+            pitches, selection, {c["claim_id"]: c["role"] for c in claims},
+            article_headline=article["headline"],
+        )
+        first_claims = {claim_map[c]["role"] for c in article["paragraphs"][0]["claim_ids"]}
+        checks["story_thesis_selection"] = (
+            not pitch_issues and "market_context" not in first_claims and
+            bool(first_claims.intersection({"new_development", "prior_expectations"}))
+        )
         checks["human_release_gate_disabled"] = (
             article.get("publication_enabled") is False and
             article.get("human_semantic_factcheck") is False and
@@ -144,7 +159,8 @@ def audit_case(case: dict) -> dict:
     return {
         "evaluation_type": "offline_structural_field_trial",
         "checks": checks,
-        "score": sum(10 for passed in checks.values() if passed),
+        "score": round(100 * sum(checks.values()) / len(checks)),
+        "story_selection_issues": locals().get("pitch_issues", ["story_selection_not_evaluated"]),
         "publication_enabled": False,
         "semantic_accuracy_certified": False,
         "human_editorial_quality_measured": False,
@@ -175,4 +191,14 @@ def render_shadow(case: dict) -> str:
     result.extend(["", "### Questions the reporter must still resolve", ""])
     result.extend(f"- {q}" for q in case["unresolved_questions"])
     result.extend(["", "**Editorial status:** HELD — an independent semantic fact-check and owner approval are required.", ""])
+    selection = parse_editorial_selection(case["editorial_selection"])
+    pitches = {p.pitch_id: p for p in parse_story_pitches(case["story_pitches"])}
+    result.extend(["## Editorial story spine (internal shadow review)", "",
+                   f"- **Chosen angle:** {pitches[selection.selected_pitch_id].thesis}",
+                   f"- **Why this angle:** {selection.rationale}",
+                   "- **Competing angles assessed:** " + "; ".join(
+                       p.working_headline for p in pitches.values()
+                       if p.pitch_id != selection.selected_pitch_id),
+                   "- **Quality caveat:** structural checks passed; narrative merit, originality "
+                   "and semantic accuracy are not independently scored or certified.", ""])
     return "\n".join(result)
