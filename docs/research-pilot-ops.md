@@ -125,8 +125,17 @@ final provider invoice never exceeds $2 due delayed metering.
   bypass rate limits or treat web snippets as authenticated captures. The
   expanded gateway now supports bounded PDF/JSON/CSV/XML/TSV/text and first-party
   dates, document hashes and excerpt locations with offline regression tests.
-  Its updated CI shape probe must still be run against actual sources. PDF
-  OCR and blocked publisher access remain separate challenges.
+  The updated CI shape probe results are recorded below. PDF OCR and blocked
+  publisher access remain separate challenges.
+- **Expanded gateway re-test:** [CI run 141](https://github.com/nolandrw/marketsignal/actions/runs/41927205114)
+  passed all automated checks. The hosted no-model probe found **1/5 source
+  leads potentially capturable**: NASA FAQ. SEC index still lacked usable
+  publication metadata; MARAD, Fed and AARO returned HTTP errors from that
+  runner. A separate local no-model run retrieved both NASA and MARAD, and
+  each produced a dated, three-excerpt `ArticleCapture` with a full SHA-256.
+  Thus, retrieval availability varies by network; neither result is permission
+  to circumvent a blocked site. These two individual captures are **not**
+  complete four-case evidence packets and have not undergone semantic review.
 - The manual workflow is a draft PR change and is not yet on the default
   branch; nothing can be dispatched through that workflow until reviewed
   and merged.

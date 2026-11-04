@@ -584,7 +584,9 @@ def main(argv: list[str] | None = None) -> int:
         policy_raw = json.loads(Path(arguments.policy_file).read_text(encoding="utf-8"))
         if (not isinstance(policy_raw, list) or not 1 <= len(policy_raw) <= 30 or
                 any(not isinstance(row, dict) or
-                    set(row) != {"host", "kind", "copyright_basis"} for row in policy_raw)):
+                    not {"host", "kind", "copyright_basis"} <= set(row) or
+                    set(row) - {"host", "kind", "copyright_basis", "max_capture_bytes"}
+                    for row in policy_raw)):
             parser.error("Publisher policy must be a bounded allowlist")
         gateway = SourceCaptureGateway(tuple(HostPermission(**row) for row in policy_raw))
         archive = json.loads(Path(arguments.archive_file).read_text(encoding="utf-8"))

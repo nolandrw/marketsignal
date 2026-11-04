@@ -123,8 +123,10 @@ command always remains an **unpublished shadow**.
   origins and first-party publication timestamps.
 - Synthetic PDF, JSON variants, CSV/TSV, XML, text and official HTML table
   captures, with original-byte digests, location fields, publication-date holds,
-  type limits, DTD rejection and permission checks. No live official source is
-  yet certified captured by these new format paths.
+  type limits, DTD rejection and permission checks. Two approved official HTML
+  sources (NASA and MARAD) have also passed actual local gateway captures;
+  real PDF/structured feeds and complete case-level source diversity remain
+  unverified.
 - Publisher `robots.txt` allows and blocks; blocked links never reach article
   fetching.
 - HTML script/prompt injection is not treated as article evidence.
