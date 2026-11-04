@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Protocol
 
 from .field_trial import _utc, _web_url
-from .model_gateway import ModelUnavailable
+from .model_gateway import ModelUnavailable, STAGE_INSTRUCTIONS
 from .story_thesis import (RUBRIC_WEIGHTS, StoryPitch,
                            headline_issues, parse_story_pitches)
 
@@ -73,7 +73,7 @@ def process_scorecard(run: ShadowRun) -> dict:
     reviews = [entry["stage"] for entry in run.reviews]
     checks = {
         "source_integrity": not run.source_issues,
-        "two_competing_pitches": len(run.pitches) >= 2,
+        "bounded_supported_pitches": 1 <= len(run.pitches) <= 3,
         "bounded_calls": run.model_calls <= run.model_call_budget,
         "pitch_verifier_handoff": "pitch_verifier" in stages,
         "editor_owned_selection": bool(run.selected and run.selected.get("headline")),
@@ -325,6 +325,9 @@ class EditorialShadowLoop:
             result.trace.append({"step": len(result.trace) + 1,
                                  "stage": stage, "input_sha256": _hash(payload),
                                  "output_sha256": _hash(response),
+                                 "agent_prompt_sha256": hashlib.sha256(
+                                     STAGE_INSTRUCTIONS[stage].encode("utf-8")).hexdigest(),
+                                 "model_id": getattr(self.model, "model", "scripted_replay"),
                                  "output_bytes": len(json.dumps(response)),
                                  "status": "completed"})
             return response
@@ -341,14 +344,19 @@ class EditorialShadowLoop:
                 generated = call("investigator", {**context, "verifier_feedback": feedback})
                 pitches = parse_story_pitches(generated.get("pitches"))
                 result.pitches = [asdict(p) for p in pitches]
-                if not 2 <= len(pitches) <= 3 or len({p.pitch_id for p in pitches}) != len(pitches):
-                    feedback = ["Provide two or three DISTINCT, traceable and complete story pitches"]
+                if not 1 <= len(pitches) <= 3 or len({p.pitch_id for p in pitches}) != len(pitches):
+                    feedback = ["Provide one to three distinct, sourced pitches; do not invent alternatives"]
                     continue
                 local = {p.pitch_id: list(pitch_issues(p, case)) for p in pitches}
                 reviews = call("pitch_verifier", {**context, "pitches": result.pitches,
                                                  "local_provenance_findings": local})
+                if (not isinstance(reviews.get("reviews"), list) or
+                        any(not isinstance(item, dict) or "pitch_id" not in item
+                            for item in reviews["reviews"])):
+                    return hold("malformed_pitch_verifier_review")
                 by_id = {item["pitch_id"]: item for item in reviews["reviews"]}
-                if len(by_id) != len(pitches) or set(by_id) != set(local):
+                if (len(reviews["reviews"]) != len(pitches) or
+                        len(by_id) != len(pitches) or set(by_id) != set(local)):
                     return hold("incomplete_pitch_verifier_review")
                 accepted = []
                 feedback = []
@@ -357,7 +365,9 @@ class EditorialShadowLoop:
                     if (review["verdict"] not in ("accept", "revise", "reject") or
                             not isinstance(review["issues"], list)):
                         return hold("invalid_pitch_verifier_verdict")
-                    if local[pitch.pitch_id] or review["verdict"] != "accept":
+                    # 'accept' with unresolved issues/research requests is not an acceptance.
+                    verifier_notes = review["issues"] + review.get("research_requests", [])
+                    if local[pitch.pitch_id] or review["verdict"] != "accept" or verifier_notes:
                         feedback.extend([pitch.pitch_id + ": " + item
                                          for item in local[pitch.pitch_id] + review["issues"]])
                         feedback.extend(review.get("research_requests", []))
@@ -382,6 +392,16 @@ class EditorialShadowLoop:
                     len(editorial["rationale"].strip()) < 45 or
                     result.final_editorial_score < self.policy.commission_threshold):
                 return hold("chief_editor_declined_or_unsubstantiated_angle")
+            # An unresolved desk request is a research HOLD, never an authorization
+            # to proceed based on a numerical score alone.
+            outstanding = editorial["requested_work"]
+            if not isinstance(outstanding, list) or any(
+                    not isinstance(item, str) or not item.strip() for item in outstanding):
+                return hold("invalid_editor_research_request")
+            if outstanding:
+                result.reviews.append({"stage": "chief_editor", "status": "research_required",
+                                       "requested_work": outstanding[:8]})
+                return hold("chief_editor_requested_additional_reporting")
             result.selected = {"selected_pitch_id": choice_id,
                                "headline": editorial["headline"],
                                "rationale": editorial["rationale"],
