@@ -49,6 +49,9 @@ python -m marketsignal investigate-archive --archive-file data/archive/2026-11-0
 python -m marketsignal newsroom-v3-demo
 python -m marketsignal field-trial --case data/private/your_research_case.json --out reports/field-trial.md
 python -m marketsignal shadow-loop --mode replay --case tests/fixtures/fictional_field_trial.json --out reports/editorial-loop.md --trace reports/editorial-loop.json
+python -m marketsignal capture-context --archive-file data/archive/YYYY-MM-DD.json --policy-file examples/source-capture-policy.example.json --out data/private/captured-context.json
+# Model opt-in; requires OPENAI_API_KEY and an approved independent-reporting source policy:
+python -m marketsignal assemble-research-case --capture-file data/private/captured-context.json --case-id example-news-story --out data/private/working-research-case.json
 python -m marketsignal quantitative-report --archive-file data/archive/2026-11-03.json
 # Optional manual, bounded source checks and history capture:
 python -m marketsignal kalshi-sample --max-pages 1
@@ -134,6 +137,14 @@ suppression window per market.
   handoff coverage but holds at a provisional **75/100** article-quality
   score, with independent quality and fact checks unmeasured. See the
   [executable agentic loop](docs/agentic-shadow-loop.md).
+- A new, read-only **source-capture gateway** that takes historical/recent
+  GDELT discovery leads through explicitly approved publishers, `robots.txt`,
+  publisher-date checks, bounded HTML extraction and short source fingerprints.
+  An opt-in claim-extraction stage turns diverse captured excerpts into a
+  provisional research case, then hands it to the existing newspaper workflow.
+  It cannot assume permission to scrape news outlets, cannot invent missing
+  sourcing and is not activated in the daily public pipeline. See
+  [source-capture controls](docs/source-capture-v1.md).
 - Bounded historical-context discovery across prior, recent and broader
   reporting windows (GDELT metadata only), triggered in daily shadow runs
   and recorded as sanitized counts, with no claim that a news hit is verified.
@@ -151,9 +162,10 @@ suppression window per market.
   exists but credentials/provider access have not been exercised), independent
   full-text verification, human-rated editorial evaluation or publication.
   Source **discovery** exists, but discovery is not fact-checking.
-- Automatic primary-source/full-text collection across subjects, real-world
-  context packets, professional semantic review and unattended newspaper
-  articles. The local feature demo's data is synthetic, not live reporting.
+- Broad, licensed or publisher-permissioned full-text collection across
+  subjects, production-tested source availability, independent semantic
+  review and unattended newspaper articles. The new capture gateway is a
+  restricted opt-in component, not proof of live newsroom-quality research.
 - Cross-market clustering, professional licensing review, or fully unattended operation.
 
 CI live-source probes confirmed Polymarket history (49 observations) and,

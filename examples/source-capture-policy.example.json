@@ -1,0 +1,27 @@
+[
+  {
+    "host": "www.federalreserve.gov",
+    "kind": "official_record",
+    "copyright_basis": "official_public_record"
+  },
+  {
+    "host": "www.bls.gov",
+    "kind": "official_record",
+    "copyright_basis": "official_public_record"
+  },
+  {
+    "host": "www.census.gov",
+    "kind": "official_record",
+    "copyright_basis": "official_public_record"
+  },
+  {
+    "host": "www.nasa.gov",
+    "kind": "official_record",
+    "copyright_basis": "official_public_record"
+  },
+  {
+    "host": "www.sec.gov",
+    "kind": "official_record",
+    "copyright_basis": "official_public_record"
+  }
+]
