@@ -49,7 +49,7 @@ class NewspaperFeatureTests(unittest.TestCase):
 
     def test_investigator_must_propose_multiple_supported_angles(self):
         broken = replace(self.dossier, story_pitches=())
-        self.assertIn("missing_competing_story_pitches", self.editor.plan(self.candidate, broken).blockers)
+        self.assertIn("missing_or_duplicate_story_pitches", self.editor.plan(self.candidate, broken).blockers)
         self.assertEqual(self.editor.plan(self.candidate, broken).disposition, "research_hold")
 
     def test_chief_editor_must_select_an_angle(self):
