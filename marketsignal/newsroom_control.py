@@ -150,6 +150,10 @@ class StoryState:
     editorial_assignment_ready: bool = False
     editorial_review_passed: bool = False
     copy_review_passed: bool = False
+    article_sha256: str | None = None
+    copy_article_sha256: str | None = None
+    human_factcheck_reference: str | None = None
+    factchecked_article_sha256: str | None = None
     audience_review_recorded: bool = False
     problems: list[str] = field(default_factory=list)
 
@@ -183,8 +187,11 @@ class WorkflowController:
             raise ValueError("Writer requires an explicit chief-editor assignment")
         if story.state == "editorial_review" and target == "copy_editing" and not story.editorial_review_passed:
             raise ValueError("Editor has not approved this draft")
-        if story.state == "copy_editing" and target == "audience_review" and not story.copy_review_passed:
-            raise ValueError("Copy review has not passed")
+        if story.state == "copy_editing" and target == "audience_review" and not (
+            story.copy_review_passed and story.article_sha256 and
+            story.article_sha256 == story.copy_article_sha256
+        ):
+            raise ValueError("Copy artifact does not match the editor-reviewed article")
         if story.state == "audience_review" and target == "release_review" and not story.audience_review_recorded:
             raise ValueError("Audience diagnostic must be recorded, not necessarily positive")
         if story.state == "verifying" and target == "investigating":
@@ -208,10 +215,19 @@ class WorkflowController:
             story.semantic_review_passed = False
         if target == "pending_owner_approval" and (not story.semantic_review_passed or
                                                    story.risk != "low" or
-                                                   not story.dossier_audited):
+                                                   not story.dossier_audited or
+                                                   not story.editorial_review_passed or
+                                                   not story.copy_review_passed or
+                                                   not story.audience_review_recorded or
+                                                   not story.human_factcheck_reference or
+                                                   not story.article_sha256 or
+                                                   story.copy_article_sha256 != story.article_sha256 or
+                                                   story.factchecked_article_sha256 != story.article_sha256):
             raise ValueError("Unverified or elevated-risk story cannot request release")
         if target == "approved_for_manual_release":
-            if not (owner_authorized and story.semantic_review_passed and story.risk == "low"):
+            if not (owner_authorized and story.semantic_review_passed and story.risk == "low" and
+                    story.owner_approved is False and story.human_factcheck_reference and
+                    story.factchecked_article_sha256 == story.copy_article_sha256 == story.article_sha256):
                 raise ValueError("Explicit owner approval and independent review are required")
             story.owner_approved = True
         story.state = target

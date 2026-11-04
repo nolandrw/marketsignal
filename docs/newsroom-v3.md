@@ -1,7 +1,9 @@
 # Newsroom v3: contracts, operating rules and staged launch
 
 **Implementation status (2026-11-04):** An offline, $0 infrastructure and
-fictional workflow test are implemented. The Topic Lead now has versioned model
+fictional workflow test are implemented. The newsroom-wide enterprise audit
+is documented in [enterprise-newsroom-audit.md](enterprise-newsroom-audit.md),
+including the remaining critical release blockers. The Topic Lead has versioned model
 instructions, a structured source/coverage handoff, a deterministic decision
 gate, an opt-in model CLI, and offline regression cases. **This does not mean**
 that autonomous topic research, authentic editorial judgment, semantic
@@ -259,8 +261,11 @@ Three authority tiers:
   evidence-based change request 20; auditability 20.
 - Result: decreased independently measured failure rate 40; no regressions
   30; cost per accepted story 20; editor usefulness 10.
-- Letter grades require **20 externally labeled events** per agent; absent
-  labels are `unrated`, not A.
+- Operational reason codes are **never** independent quality labels. At least
+  20 distinct, reviewer-attested cases may yield a *provisional unverified*
+  letter grade; the official grade stays `unrated` until the identity and
+  evidence of the human evaluator are authenticated by a separate service.
+  The current ledger does not supply this authentication.
 
 ## Source reliability hierarchy
 
@@ -302,6 +307,23 @@ and holdout. Compare precision@10 and Brier score to the fixed quantitative
 baseline, then require a prospective shadow trial and a human decision before
 changing routing. Never use fictional panel ratings, speculative comments,
 post-event facts or the model's own prior outputs as ground-truth labels.
+
+## Copy-desk preflight and release-version control
+
+`copy_preflight.py` validates that assembled copy has not altered the exact
+editor-reviewed headline, deck or paragraphs, that links retain canonical
+source IDs/URLs, that links are HTTPS without added referral query strings,
+and that photo entries include rights-record references, credits and alt text.
+This is a *structural preflight*, not an image-license audit or rendered HTML
+accessibility test. Missing or false rights references still require a human
+rights review.
+
+The deterministic release controller now requires the same article fingerprint
+in editorial copy and the human fact-check record, a nonempty human review
+reference, passing editorial/copy workflow flags and low risk before requesting
+separate owner approval. This is a **safe integration contract**, not a
+substitute for human identity verification or actual semantic fact checking;
+the demo correctly HOLDS before that step.
 
 ## Terminal states, limits and owner workflow
 

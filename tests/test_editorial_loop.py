@@ -69,6 +69,44 @@ class EditorialShadowLoopTests(unittest.TestCase):
         self.assertTrue(run.article)
         self.assertFalse(run.publication_enabled)
 
+    def test_verifier_acceptance_with_unresolved_issues_is_not_accepted(self):
+        def unresolved(stage, payload, output, calls):
+            if stage == "pitch_verifier":
+                for review in output["reviews"]:
+                    review["issues"] = ["Source does not establish the proposed cause"]
+            return output
+
+        run = EditorialShadowLoop(InterceptingModel(self.case, unresolved)).run(self.case)
+        self.assertEqual(run.disposition_reason, "no_provisionally_supported_story_pitch")
+        self.assertIsNone(run.article)
+
+    def test_chief_editor_research_request_blocks_writer(self):
+        def needs_more(stage, payload, output, calls):
+            if stage == "chief_editor":
+                output["requested_work"] = ["Confirm what the primary document says"]
+            return output
+
+        model = InterceptingModel(self.case, needs_more)
+        run = EditorialShadowLoop(model).run(self.case)
+        self.assertEqual(run.disposition_reason, "chief_editor_requested_additional_reporting")
+        self.assertNotIn("writer", [stage for stage, _ in model.calls])
+        self.assertTrue(any(review.get("status") == "research_required"
+                            for review in run.reviews))
+
+    def test_one_defensible_pitch_does_not_require_invented_alternatives(self):
+        chosen_id = self.case["editorial_selection"]["selected_pitch_id"]
+
+        def one_supported_angle(stage, payload, output, calls):
+            if stage == "investigator":
+                output["pitches"] = [pitch for pitch in output["pitches"]
+                                      if pitch["pitch_id"] == chosen_id]
+            return output
+
+        run = EditorialShadowLoop(InterceptingModel(self.case, one_supported_angle)).run(self.case)
+        self.assertEqual(len(run.pitches), 1)
+        self.assertTrue(run.article)
+        self.assertFalse(run.publication_enabled)
+
     def test_fact_checker_sends_specific_feedback_to_writer(self):
         def reject_first(stage, payload, output, calls):
             if stage == "fact_verifier" and sum(s == stage for s, _ in calls) == 1:
@@ -129,6 +167,16 @@ class EditorialShadowLoopTests(unittest.TestCase):
 
         model = InterceptingModel(self.case, skip_one)
         run = EditorialShadowLoop(model).run(self.case)
+        self.assertEqual(run.disposition_reason, "incomplete_pitch_verifier_review")
+        self.assertIsNone(run.article)
+
+    def test_verifier_cannot_repeat_an_angle_to_hide_unreviewed_work(self):
+        def duplicate_one(stage, payload, output, calls):
+            if stage == "pitch_verifier":
+                output["reviews"].append(copy.deepcopy(output["reviews"][0]))
+            return output
+
+        run = EditorialShadowLoop(InterceptingModel(self.case, duplicate_one)).run(self.case)
         self.assertEqual(run.disposition_reason, "incomplete_pitch_verifier_review")
         self.assertIsNone(run.article)
 

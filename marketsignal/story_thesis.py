@@ -78,8 +78,8 @@ def audit_story_selection(
     a supported development, prior view, stakes and counterevidence.
     """
     issues: list[str] = []
-    if len(pitches) < 2 or len({p.pitch_id for p in pitches}) != len(pitches):
-        issues.append("missing_competing_story_pitches")
+    if not 1 <= len(pitches) <= 3 or len({p.pitch_id for p in pitches}) != len(pitches):
+        issues.append("missing_or_duplicate_story_pitches")
     by_id = {p.pitch_id: p for p in pitches}
     for pitch in pitches:
         if not re.fullmatch(r"[a-z][a-z0-9_-]{2,60}", pitch.pitch_id):
