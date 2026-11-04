@@ -1,8 +1,8 @@
-"""Read-only preparation of *partial* four-case original-source packets.
+"""Read-only preparation of four-case original-source research *seeds*.
 
 Never calls an LLM, promotes a web snippet, publishes, or claims coverage
-review. Missing source diversity stays visibly held. Private output is
-gitignored and must pass run_research_pilot.preflight before any paid run.
+review. Missing diversity stays visible for later investigation. Private
+output is gitignored and must pass pilot preflight before any paid run.
 """
 
 from __future__ import annotations
@@ -147,7 +147,7 @@ def prepare() -> dict:
             "test_fixture_file": basename + "-fixture.json",
         }
         payloads = {
-            "context_file": context.to_dict(),
+            "context_file": {"schema_version": 1, **context.to_dict()},
             "captures_file": {"source_rows": all_rows, "publication_enabled": False,
                               "claims_semantically_verified": False},
             "policy_file": {"publishers": policy_publishers,
@@ -167,7 +167,9 @@ def prepare() -> dict:
             "source_origins": len(origins), "excerpt_rows": len(all_rows),
             "rights_reviewed_for_independent_reporting": False,
             "coverage_checked": False,
-            "pilot_ready": False,
+            "seed_evidence_ready": bool(all_rows),
+            "publication_ready": False,
+            "pilot_ready": bool(all_rows),
             "original_source_attempts": source_status,
         }
     (PRIVATE / "pilot-manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

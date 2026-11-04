@@ -54,8 +54,9 @@ class EvaluationFixtureTests(unittest.TestCase):
         case = replace(ineligible_case(), coverage_checked=False)
         fixture = ResearchTestFixture(case.story_id, case.quantitative_pitch.market_id,
                                       case.as_of, "Test without a coverage baseline")
-        with self.assertRaises(ValueError):
-            evaluate_topic_fixture(RecordingModel(), case, fixture)
+        incomplete = evaluate_topic_fixture(RecordingModel(), case, fixture)
+        self.assertEqual(incomplete.disposition, "go")
+        self.assertIn("coverage_review_pending", incomplete.reason_codes)
         case = ineligible_case()
         wrong = replace(fixture, case_id="other_case")
         with self.assertRaises(ValueError):

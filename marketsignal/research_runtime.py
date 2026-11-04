@@ -152,8 +152,10 @@ def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
             "investigator": investigation,
             "handoff_contract": contract.to_dict(),
             "evidence_verifier": verification.to_dict() if verification else None,
-            "status": "provisionally_verified_for_editorial_review"
-                      if verification and verification.status == "provisionally_verified"
-                      else "held_pending_research_or_review",
+            "status": ("held_pending_coverage_review"
+                       if not context.coverage_checked else
+                       "provisionally_verified_for_editorial_review"
+                       if verification and verification.status == "provisionally_verified"
+                       else "held_pending_research_or_review"),
             "publication_enabled": False, "human_factcheck_attested": False,
             "evaluation_only": bool(test_fixture)})

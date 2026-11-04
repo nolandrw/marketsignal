@@ -18,7 +18,7 @@ from scripts import run_research_pilot as pilot
 
 
 class PilotRunnerTests(unittest.TestCase):
-    def test_full_pilot_source_gate_requires_origins_rights_dates_and_hashes(self):
+    def test_seed_gate_accepts_one_original_but_keeps_rights_dates_and_hashes(self):
         as_of = int(time.time())
         fixtures = [("records.example.gov", "official_record", "primary_record",
                      "official_public_record"),
@@ -44,12 +44,15 @@ class PilotRunnerTests(unittest.TestCase):
             publishers.append({"host": host, "kind": kind, "copyright_basis": rights})
         context = SimpleNamespace(as_of=as_of, sources=leads)
         policy = {"publishers": publishers}
-        pilot.require_complete_source_packet(context, captures, policy, rows)
+        pilot.require_authentic_seed_packet(context, captures, policy, rows)
+        # The source hunt starts with one genuine record; more sources are
+        # an Investigator output, not a precondition to run the Investigator.
+        pilot.require_authentic_seed_packet(context, captures[:1], policy, rows[:1])
         with self.assertRaisesRegex(ValueError, "provenance"):
-            pilot.require_complete_source_packet(context, captures, policy,
+            pilot.require_authentic_seed_packet(context, captures, policy,
                                                  rows[:2] + [{**rows[2], "robots_decision": "denied"}])
         with self.assertRaisesRegex(ValueError, "provenance"):
-            pilot.require_complete_source_packet(context, captures[:2] + [
+            pilot.require_authentic_seed_packet(context, captures[:2] + [
                 ResearchCapture(**{**captures[2].__dict__, "document_sha256": ""})], policy, rows)
         without_reporting = [ResearchCapture(**{**captures[2].__dict__,
                                              "source_kind": "original_research"})]
@@ -58,10 +61,16 @@ class PilotRunnerTests(unittest.TestCase):
         altered_leads = leads[:2] + [TopicSourceLead(leads[2].source_id,
                          leads[2].publisher, leads[2].url, leads[2].origin_key,
                          leads[2].published_at, "primary_record", leads[2].captured_excerpt)]
-        with self.assertRaisesRegex(ValueError, "licensed reporting"):
-            pilot.require_complete_source_packet(
-                SimpleNamespace(as_of=as_of, sources=altered_leads),
-                captures[:2] + without_reporting, altered_policy, rows)
+        # A pilot with only official / original research remains eligible;
+        # an independent-reporting document must still be permissioned if used.
+        pilot.require_authentic_seed_packet(
+            SimpleNamespace(as_of=as_of, sources=altered_leads),
+            captures[:2] + without_reporting, altered_policy, rows)
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            pilot.require_authentic_seed_packet(
+                context, captures[:1], {"publishers": []}, rows[:1])
+        with self.assertRaisesRegex(ValueError, "inventory"):
+            pilot.require_authentic_seed_packet(context, (), policy, ())
 
     def test_exact_four_subjects_and_private_paths_required(self):
         for bad in ("../stolen.json", "data/archive/case.json",

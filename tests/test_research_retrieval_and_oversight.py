@@ -356,6 +356,12 @@ class ResearchAndOversightTests(unittest.TestCase):
             self.assertTrue(seeded["evaluation_only"])
             self.assertEqual(seeded["topic_lead"]["selected_angle_id"], "timeline-delay")
             self.assertEqual(seeded_model.calls, ["topic_lead", "dossier_evidence_verifier"])
+            unreviewed = run_research_shadow(
+                replace(seeded_case, coverage_checked=False), captures[:1],
+                angle_id="auto:first", research_policy={}, model=StageModel("supported"),
+                test_fixture=fixture)
+            self.assertEqual(unreviewed["status"], "held_pending_coverage_review")
+            self.assertFalse(unreviewed["publication_enabled"])
             with self.assertRaises(ValueError):
                 run_research_shadow(case, captures[:1], angle_id="auto:first",
                                     research_policy={}, model=StageModel("supported"))

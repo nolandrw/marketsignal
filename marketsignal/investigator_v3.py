@@ -175,8 +175,8 @@ def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapt
     Topic Lead. This bridge does not fetch documents or choose among angles.
     """
     if (assessment.disposition != "go" or context.story_id != assessment.story_id or
-            not context.coverage_checked or not angle_id):
-        raise ValueError("Unapproved or unreviewed Topic Lead handoff")
+            not angle_id):
+        raise ValueError("Unapproved Topic Lead handoff")
     selected = [a for a in assessment.angles if a.angle_id == angle_id]
     if len(selected) != 1:
         raise ValueError("Investigator angle must be explicitly selected")
@@ -199,9 +199,11 @@ def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapt
                 source.publisher != lead.publisher or
                 source.source_kind not in source_kind_map.get(lead.source_type, set())):
             raise ValueError("Topic Lead metadata differs from captured evidence")
-    coverage = assessment.coverage_analysis + "\n" + "\n".join(
+    coverage = (("COVERAGE UNREVIEWED: investigate prior reporting before claiming novelty.\n"
+                 if not context.coverage_checked else "") +
+                assessment.coverage_analysis + "\n" + "\n".join(
         f"{item.story_id}: {item.title} ({item.overlap})"
-        for item in context.coverage_matches)
+        for item in context.coverage_matches))
     return InvestigatorAssignment(
         case_id=context.story_id, as_of=context.as_of,
         topic=angle.central_question, topic_lead_angle=angle.working_headline,

@@ -248,8 +248,11 @@ class TopicLeadAgent:
                 hold("stakes_not_established")
             if not angles or not research_questions:
                 hold("no_actionable_research_assignment")
+            # A pending coverage search is an explicit research assignment,
+            # not grounds to prevent the Investigator from searching at all.
+            # It must remain visible downstream; no publication is authorized.
             if not context.coverage_checked:
-                hold("coverage_not_checked")
+                reason_codes.append("coverage_review_pending")
             if not peg_ids and peg_type != "original_analysis":
                 hold("unsubstantiated_news_peg")
 
@@ -257,11 +260,8 @@ class TopicLeadAgent:
                               if source.source_id in referenced and
                               source.source_type in RESEARCH_LEAD_TYPES and
                               source.captured_excerpt}
-            one_primary_testable = (context.primary_has_independent_test and any(
-                source.source_id in referenced and source.source_type == "primary_record" and
-                source.captured_excerpt for source in context.sources))
-            if len(usable_origins) < 2 and not one_primary_testable:
-                hold("insufficient_independent_research_leads")
+            if not usable_origins:
+                hold("no_authentic_research_seed")
 
             covered = {angle_id for match in context.coverage_matches
                        if match.overlap == "complete" for angle_id in match.angle_ids}

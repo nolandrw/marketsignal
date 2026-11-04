@@ -65,22 +65,23 @@ def _rows(manifest: Path = MANIFEST) -> list[dict]:
     return cases
 
 
-def require_complete_source_packet(context, captures, policy: dict,
-                                   source_rows: list[dict]) -> None:
-    """Zero-model-cost evidence and rights gate; never certify truth here.
+def require_authentic_seed_packet(context, captures, policy: dict,
+                                  source_rows: list[dict]) -> None:
+    """Authenticate research *seeds*, without demanding a finished dossier.
 
-    In particular, three excerpt rows from one PDF count as *one* origin.
-    A licensed independent reporting source must be explicitly allowlisted.
+    Corroboration, source diversity and prior-coverage research belong to the
+    Investigator and editorial review, not the entrance to the investigation.
+    Publisher permission, real dated documents and immutable provenance remain
+    mandatory. This function never certifies a source's factual assertions.
     """
     allowed = {row["host"]: row for row in policy["publishers"]}
     leads = {lead.source_id: lead for lead in context.sources}
-    if (not 3 <= len(captures) <= 15 or len(captures) != len(source_rows) or
+    if (not 1 <= len(captures) <= 15 or len(captures) != len(source_rows) or
             len(leads) < len(captures) or
+            len({cap.source_id for cap in captures}) != len(captures) or
             {cap.source_id for cap in captures} !=
             {row.get("source_id") for row in source_rows}):
         raise ValueError("Pilot evidence inventory is incomplete")
-    origins = set()
-    kinds = set()
     source_kind_map = {"primary_record": {"official_record", "original_research"},
                        "independent_reporting": {"independent_reporting"},
                        "public_statement": {"statement"}}
@@ -104,11 +105,6 @@ def require_complete_source_packet(context, captures, policy: dict,
                 lead.published_at != capture.published_at or
                 capture.source_kind not in source_kind_map.get(lead.source_type, set())):
             raise ValueError("Pilot source lacks original, dated, permissioned provenance")
-        origins.add(capture.origin_key)
-        kinds.add(capture.source_kind)
-    if len(origins) < 3 or not ({"official_record", "original_research"} & kinds) or \
-            "independent_reporting" not in kinds:
-        raise ValueError("Pilot requires three origins, a primary source, and licensed reporting")
 
 
 def preflight(cases: list[dict]) -> None:
@@ -129,14 +125,14 @@ def preflight(cases: list[dict]) -> None:
         lead_sources = {lead.source_id: lead for lead in context.sources}
         if (context.quantitative_pitch.market_id != EXPECTED_IDS[case["name"]] or
                 context.story_id != fixture.case_id or fixture.market_id != EXPECTED_IDS[case["name"]] or
-                context.as_of != fixture.as_of or not context.coverage_checked or
+                context.as_of != fixture.as_of or
                 any(source.published_at > context.as_of for source in captures) or
                 not any(capture.source_id in lead_sources and
                         capture.url == lead_sources[capture.source_id].url
                         for capture in captures)):
-            raise ValueError("Pilot identity, coverage, or source clock mismatch")
-        require_complete_source_packet(context, captures, policy,
-                                       source_packet["source_rows"])
+            raise ValueError("Pilot identity or source clock mismatch")
+        require_authentic_seed_packet(context, captures, policy,
+                                      source_packet["source_rows"])
 
 
 def run() -> int:

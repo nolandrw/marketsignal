@@ -46,11 +46,15 @@ def load_test_fixture(path: str | Path) -> ResearchTestFixture:
 
 def evaluate_topic_fixture(model, context: TopicLeadContext,
                            fixture: ResearchTestFixture) -> TopicLeadAssessment:
-    """Bypass *only* quantitative eligibility; retain all editorial/source gates."""
+    """Bypass quantitative eligibility; permit explicitly incomplete research.
+
+    Authentic source and editorial gates still run. Missing coverage is
+    surfaced as a pending research task, not misrepresented as reviewed.
+    """
     if (not isinstance(fixture, ResearchTestFixture) or fixture.case_id != context.story_id or
             fixture.market_id != context.quantitative_pitch.market_id or
-            fixture.as_of != context.as_of or not context.coverage_checked):
-        raise ValueError("Fixture identity, clock or coverage mismatch")
+            fixture.as_of != context.as_of):
+        raise ValueError("Fixture identity or clock mismatch")
     result = TopicLeadAgent(model)._assess(context, test_fixture_reason=fixture.purpose)
     if not result.evaluation_only or result.publication_enabled:
         raise AssertionError("Test fixture leaked into production eligibility")

@@ -301,6 +301,10 @@ class InvestigatorV3Tests(unittest.TestCase):
         brief = assignment_from_topic_lead(context, assessment, (capture,), angle_id="angle_a")
         self.assertEqual(brief.seed_sources[0], capture)
         self.assertIn("Check the engineering record", brief.research_questions)
+        missing_coverage = assignment_from_topic_lead(
+            replace_fake(context, coverage_checked=False), assessment, (capture,),
+            angle_id="angle_a")
+        self.assertIn("COVERAGE UNREVIEWED", missing_coverage.coverage_summary)
         with self.assertRaises(ValueError):
             assignment_from_topic_lead(context, assessment, (capture,), angle_id="nonexistent")
         with self.assertRaises(ValueError):

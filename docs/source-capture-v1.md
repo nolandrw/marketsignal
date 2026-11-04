@@ -62,8 +62,11 @@ flowchart TD
   (each ≤370 characters) are saved as excerpts. This
   is not permission to reproduce copyrighted reporting or images.
 - Captures from one domain count as **one origin**, no matter how many excerpts
-  are saved. Before paid claim extraction, the package needs three origins,
-  a primary source and an authorized independent reporting source.
+  are saved. A research pilot may start with one authentic dated and
+  permissioned original capture. The Investigator is tasked with discovering
+  independent corroboration and prior reporting; provenance, origin diversity
+  and rights remain explicit downstream evidence-quality checks. A single
+  captured origin does **not** certify the claims of a finished article.
 - The optional claim-extractor model must attach valid source IDs and exact
   contiguous excerpts. Deterministic checks reject fabricated excerpts and
   unsupported category-role labels. This does **not** constitute semantic

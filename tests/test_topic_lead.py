@@ -146,22 +146,22 @@ class TopicLeadTests(unittest.TestCase):
         response["prior_expectation_source_ids"] = ["comment"]
         assessed = TopicLeadAgent(RecordedModel(response)).assess(context())
         self.assertEqual(assessed.disposition, "hold")
-        self.assertIn("insufficient_independent_research_leads", assessed.reason_codes)
+        self.assertIn("no_authentic_research_seed", assessed.reason_codes)
 
-    def test_one_primary_can_be_commissioned_if_external_test_path_exists(self):
+    def test_one_primary_can_start_source_hunt_without_prior_corroboration(self):
         only_primary = replace(context(), sources=(context().sources[0],),
-                               primary_has_independent_test=True)
+                               primary_has_independent_test=False)
         response = proposal()
         response["public_stakes_source_ids"] = ["notice"]
         response["angles"][0]["source_ids"] = ["notice"]
         result = TopicLeadAgent(RecordedModel(response)).assess(only_primary)
         self.assertEqual(result.disposition, "go")
 
-    def test_missing_coverage_check_causes_hold(self):
+    def test_missing_coverage_check_is_explicit_research_task_not_a_hold(self):
         candidate = replace(context(), coverage_checked=False)
         result = TopicLeadAgent(RecordedModel(proposal())).assess(candidate)
-        self.assertEqual(result.disposition, "hold")
-        self.assertIn("coverage_not_checked", result.reason_codes)
+        self.assertEqual(result.disposition, "go")
+        self.assertIn("coverage_review_pending", result.reason_codes)
 
     def test_exact_angle_duplication_spikes_only_existing_angles(self):
         candidate = replace(context(), coverage_matches=(CoverageMatch(
