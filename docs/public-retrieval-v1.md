@@ -147,36 +147,40 @@ original excerpts actually say. Failed/inaccessible routes are documented, not
 silently treated as negative evidence. To avoid gaming the rubric, an empty
 social search cannot increase confidence in truth or public sentiment.
 
-## Independent overseer at the handoff
+## Corrected separation: Contract Gateway, Verifier, Process Overseer
 
-`HandoffOverseer` sits between the v3 dossier and the Verifier. It receives
-the dossier's material findings, original limited source captures and prior
-coverage **but not the Investigator's self-scored quality report or preferred
-headline**. Each claim gets a separate `supported`, `contradicted` or
-`insufficient` verdict with an exact matching source passage and rationale.
-The gateway checks the reviewer inspected every material finding, that quotes
-exist verbatim in the declared captures, and whether the reviewer found a
-contradiction/gap. Absent, malformed or failing oversight → **HOLD/return**.
+`HandoffContractGateway` is a **deterministic** check at the Investigator →
+Verifier boundary. It checks artifact identity, source IDs, dated captures,
+manifest hashes, allowed provenance, and dossier references. A source ID may
+be valid while its interpretation is wrong: **that is not the Gateway's job**.
+An invalid contract blocks handoff with explicit reason codes; a passing
+contract authorizes only entry into the Verifier stage, not commissioning.
 
-These are independent *agent roles*, not independent human truth labels. A
-second model can still agree with a faulty first model. The overseer's model
-review is useful for detecting edge cases and generating repair tickets, but
-publisher confirmation, semantic entailment and publication still require
-additional verification/human approval.
+`EvidenceVerifier` is the **single substantive dossier-claim reviewer**. The
+model adapter `ModelClaimReview` is invoked only here, after gateway success.
+It independently examines original source excerpts for every finding and
+returns `supported`, `contradicted`, or `insufficient`, with an exact quote and
+rationale. Its provisional approval is required before the controller allows
+editorial commissioning; it is **not** an authenticated human fact-check.
+Paragraph-level review remains a separate later checkpoint on the *article*.
 
-Each case records a structured reason code and next check, with privacy-safe
-event metrics in `StoryLedger`. `diagnose_handoff_failures` can detect a
-recurring class of failure across distinct cases and propose a **versioned**
-prompt/process edit. It cannot autonomously modify editorial instructions,
-thresholds or publication policy. Owner approval and held-out tests remain
-required before adopting a proposal.
+`ProcessOverseer` is an out-of-band diagnostic service: it consumes privacy-safe
+events across distinct cases, identifies repeated operational/contract/model
+failures, and proposes versioned experiments with a frozen control replay,
+held-out regression cases, and independent quality review. It cannot check
+truth, silently edit prompts/policies, relax gates, or authorize publication.
+One case's repeated error is a loop diagnostic, **not** independent cross-case
+evidence. This division replaces the earlier overlapping `HandoffOverseer`.
 
 ## Implemented integration and remaining gaps
 
 - `newsroom-v3-demo`: a fictional Topic Lead GO now selects an angle, creates a
   matching source capture assignment, invokes v3's preliminary/deep stages,
-  and passes through `HandoffOverseer` and `WorkflowController.advance_investigator_v3`
-  **before** entering verification. The append-only ledger records the stage.
+  and passes through the deterministic `HandoffContractGateway` and
+  `WorkflowController.advance_investigator_v3` **before** entering verification.
+  A scripted `EvidenceVerifier` then runs **inside** verification, and the
+  append-only ledger records both stages. The Process Overseer reads ledger
+  events and returns diagnostics but never blocks a case by itself.
   The downstream feature writer still consumes its pre-existing fictional
   `ReportingDossier` fixture, **not** a conversion of the new v3 dossier.
 - `MultiSourceResearchProvider`: composable, bounded search/capture across
@@ -184,12 +188,12 @@ required before adopting a proposal.
   Official publisher contents require explicit permission policy. Unit tests
   inject in-memory feeds, API responses and page captures; real external
   provider success has **not** been measured in this version.
-- `ModelClaimReview`: a distinct structured LLM stage is prepared, but live
+- `ModelClaimReview`: the dossier Verifier's structured LLM stage is prepared, but live
   semantic grading has **not** been run. The fictional demo reviewer returns
   scripted verdicts, so it cannot prove that a claim is accurately interpreted.
 - `research-v3-shadow`: an **explicit opt-in** private command can run Topic
-  Lead → configured public retrieval → Investigator v3 → source-first model
-  overseer and save a JSON diagnostic. Its input must include matching trusted
+  Lead → configured public retrieval → Investigator v3 → Contract Gateway →
+  provisional dossier Verifier and save a JSON diagnostic. Its input must include matching trusted
   captures and a selected angle; it does not auto-choose the story or spend
   tokens in the ordinary daily collector. No real external end-to-end run has
   been performed or validated yet. The active automated collector/daily

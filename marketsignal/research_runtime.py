@@ -3,19 +3,22 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from .agent_sources import (BlueskySearch, CrossrefSearch, GDELTSearch,
                             PolymarketComments, PublicJSONTransport)
-from .handoff_oversight import HandoffOverseer, ModelClaimReview
+from .handoff_contract import HandoffContractGateway
+from .evidence_verifier import EvidenceVerifier, ModelClaimReview
 from .investigator_v3 import (InvestigatorV3, ResearchCapture,
                               assignment_from_topic_lead)
 from .research_retrieval import (MultiSourceResearchProvider, OfficialFeedSearch,
                                  PolymarketDiscussionSearch, PublicOfficialFeedTransport)
 from .source_capture import HostPermission, SourceCaptureGateway
 from .topic_lead import TopicLeadAgent
+from .oversight import ProcessFailureEvent, ProcessOverseer
 
 
 def load_seed_captures(path: str | Path) -> tuple[ResearchCapture, ...]:
@@ -83,23 +86,58 @@ def configure_research_sources(policy: dict) -> MultiSourceResearchProvider:
 def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
                         *, angle_id: str, research_policy: dict, model) -> dict:
     """Live-readonly source collection + model stages only when caller opts in."""
+    events: list[ProcessFailureEvent] = []
+
+    def log(stage: str, reason: str, *, score=None, sources=None, findings=None):
+        events.append(ProcessFailureEvent(
+            case_id=context.story_id, stage=stage, reason_code=reason,
+            investigator_self_score=score, source_count=sources, finding_count=findings))
+
+    def annotated(payload: dict) -> dict:
+        # Observational sidecar: its output never changes the return disposition.
+        return {**payload, "process_events": [asdict(e) for e in events],
+                "process_overseer": ProcessOverseer().diagnose(events)}
+
     topic = TopicLeadAgent(model).assess(context)
     if topic.disposition != "go":
-        return {"case_id": context.story_id, "topic_lead": topic.to_dict(),
-                "investigator": None, "handoff_overseer": None,
-                "status": "topic_lead_held", "publication_enabled": False}
+        log("topic_lead", "topic_lead_" + topic.disposition)
+        return annotated({"case_id": context.story_id, "topic_lead": topic.to_dict(),
+                          "investigator": None, "handoff_contract": None,
+                          "evidence_verifier": None, "status": "topic_lead_held",
+                          "publication_enabled": False})
     assignment = assignment_from_topic_lead(context, topic, captures,
                                             angle_id=angle_id, research_mode="live_shadow")
     research = configure_research_sources(research_policy)
     investigation = InvestigatorV3(model, research).run(assignment)
     all_captures = tuple({s.source_id: s for s in captures + tuple(research.captures.values())}.values())
-    overseer = HandoffOverseer(ModelClaimReview(model)).review(
-        investigation, all_captures, coverage_summary=assignment.coverage_summary)
-    return {"case_id": context.story_id, "topic_lead": {
+    findings = ((investigation.get("dossier") or {}).get("findings") or [])
+    log("investigator_v3", str(investigation.get("disposition", "unavailable")),
+        score=(investigation.get("completed_rubric") or {}).get("total"),
+        sources=len(all_captures), findings=len(findings))
+    contract = HandoffContractGateway().validate(investigation, all_captures,
+                                                  as_of=context.as_of,
+                                                  expected_case_id=context.story_id)
+    for issue in contract.issues:
+        log("contract_gateway", issue.reason_code)
+    if not contract.issues:
+        log("contract_gateway", "contract_passed")
+    # Only the Verifier performs semantic review; it never runs on a rejected
+    # handoff. Neither its provisional judgment nor a contract pass publishes.
+    verification = (EvidenceVerifier(ModelClaimReview(model)).verify(
+        investigation, all_captures, contract, coverage_summary=assignment.coverage_summary)
+        if contract.status == "to_verifier" else None)
+    if verification:
+        for issue in verification.issues:
+            log("dossier_verifier", issue.reason_code)
+        if not verification.issues:
+            log("dossier_verifier", "provisionally_verified")
+    return annotated({"case_id": context.story_id, "topic_lead": {
                 "disposition": topic.disposition, "score": topic.score,
                 "selected_angle_id": angle_id},
             "investigator": investigation,
-            "handoff_overseer": overseer.to_dict(),
-            "status": "provisionally_ready_for_verifier" if overseer.status == "to_verifier"
+            "handoff_contract": contract.to_dict(),
+            "evidence_verifier": verification.to_dict() if verification else None,
+            "status": "provisionally_verified_for_editorial_review"
+                      if verification and verification.status == "provisionally_verified"
                       else "held_pending_research_or_review",
-            "publication_enabled": False, "human_factcheck_attested": False}
+            "publication_enabled": False, "human_factcheck_attested": False})

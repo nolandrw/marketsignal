@@ -36,7 +36,10 @@ flowchart TD
     B --> C{"Topic lead: worthwhile?"}
     C -->|No| X["Spike / hold and log reason"]
     C -->|Yes| D["Investigative journalist: dossier and hypotheses"]
-    D <--> E["Independent verifier: claims and research tickets"]
+    D --> V["Deterministic contract gateway"]
+    V -->|Valid| E["Independent verifier: claims and research tickets"]
+    V -->|Invalid| D
+    E -->|Research ticket| D
     E -->|Verified enough to commission| F["Chief editor: angle and length"]
     F --> G["Writer: evidence-bound draft"]
     G <--> H["Chief editor: markup and revision"]
@@ -48,13 +51,16 @@ flowchart TD
     L --> M["Manual publication only"]
     X --> N["Private librarian / oversight ledger"]
     K --> N
-    N --> O["Versioned change proposals"]
+    N --> O["Process Overseer: fault patterns"]
+    O --> P["Versioned proposals and regression tests"]
 ```
 
 This is **one editorial case with multiple bounded roles**, not autonomous
 agents recursively talking until they feel confident. Every edge requires a
-typed artifact and a validated transition. Oversight controls retries, not
-truth. The synthetic panel is a cheap diagnostic, not a proxy for reader
+typed artifact and a validated transition. The Orchestrator controls retries,
+the Gateway checks structure, the Verifier evaluates evidence meaning, and
+the Process Overseer analyzes recurring faults outside the editorial gates.
+The synthetic panel is a cheap diagnostic, not a proxy for reader
 engagement, publication quality or real editorial outcomes.
 
 ## Contract for every handoff

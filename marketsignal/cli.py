@@ -48,7 +48,7 @@ from .newsroom_control import (
 from .topic_lead import (
     TopicLeadAgent, TopicLeadContext, TopicSourceLead, load_topic_context,
 )
-from .oversight import OversightAgent, SyntheticAudiencePanel, grade_agents
+from .oversight import ProcessOverseer, SyntheticAudiencePanel, grade_agents
 from .copy_preflight import article_digest, check_copy_artifact, prepare_copy_artifact
 
 
@@ -222,17 +222,28 @@ def newsroom_v3_demo() -> dict:
         ledger.record(story, "quantitative_triage", "synthetic_candidate")
         for stage in ("triaged", "topic_review", "investigating"):
             move(stage, "fictional_workflow_test", "workflow_controller")
-        investigation_v3, handoff_review = run_fictional_v3_handoff(context, topic,
-                                                                  dossier.documents)
-        WorkflowController.advance_investigator_v3(story, investigation_v3, handoff_review)
-        ledger.record(story, "handoff_overseer", "investigator_v3_overseen"
-                      if story.state == "verifying" else "investigator_v3_blocked",
-                      {"review_status": handoff_review.status,
-                       "issue_count": len(handoff_review.issues),
-                       "first_issue": handoff_review.issues[0].reason_code
-                       if handoff_review.issues else "none"})
+        investigation_v3, contract, evidence_review = run_fictional_v3_handoff(
+            context, topic, dossier.documents)
+        WorkflowController.advance_investigator_v3(story, investigation_v3, contract)
+        ledger.record(story, "contract_gateway", "investigator_v3_contract_valid"
+                      if story.state == "verifying" else "handoff_contract_blocked",
+                      {"contract_status": contract.status,
+                       "issue_count": len(contract.issues),
+                       "investigator_self_score": int(investigation_v3["completed_rubric"]["total"]),
+                       "source_count": len(investigation_v3["source_ids"]),
+                       "finding_count": len(investigation_v3["dossier"]["findings"]),
+                       "first_issue": contract.issues[0].reason_code
+                       if contract.issues else "none"})
         if story.state != "verifying":
-            raise AssertionError("Fictional Investigator v3 handoff did not pass its test")
+            raise AssertionError("Fictional Investigator v3 contract did not pass its test")
+        WorkflowController.record_evidence_verification(story, evidence_review)
+        ledger.record(story, "dossier_verifier", "provisional_evidence_review"
+                      if story.evidence_verified else "verifier_returned",
+                      {"verifier_status": evidence_review.status,
+                       "issue_count": len(evidence_review.issues),
+                       "scripted_replay": True})
+        if not story.evidence_verified:
+            raise AssertionError("Fictional dossier Verifier did not pass its scripted test")
         structural_issues = accept_structural_dossier(story, candidate, dossier)
         if structural_issues:
             raise AssertionError("Fictional dossier no longer satisfies structural gate")
@@ -278,10 +289,12 @@ def newsroom_v3_demo() -> dict:
                                       "unverified_lead_counts": investigation_v3["discovery_lead_counts"],
                                       "scripted_replay": True,
                                       "uses_live_public_sources": False},
-                  "handoff_overseer": {"status": handoff_review.status,
-                                       "issues": [issue.reason_code for issue in handoff_review.issues],
-                                       "review_kind": handoff_review.review_kind,
-                                       "independent_human_review": False},
+                  "handoff_contract": contract.to_dict(),
+                  "evidence_verifier": {"status": evidence_review.status,
+                                        "issues": [issue.reason_code for issue in evidence_review.issues],
+                                        "review_kind": evidence_review.review_kind,
+                                        "scripted_replay": True,
+                                        "independent_human_review": False},
                   "owner_approval_required": True,
                   "publication_enabled": False, "audit_chain_valid": ledger.verify_chain(story.story_id),
                   "audit_handoffs": [entry["state"] for entry in ledger.events(story.story_id)],
@@ -295,7 +308,8 @@ def newsroom_v3_demo() -> dict:
                                      "rendered_html": False,
                                      "images_licensed": False},
                   "audience_panel": audience,
-                  "oversight": [p.to_dict() for p in OversightAgent().assess(ledger.metrics())]}
+                  "oversight": [p.to_dict() for p in ProcessOverseer().assess(ledger.metrics())],
+                  "process_overseer": ProcessOverseer().diagnose(ledger.diagnostic_events())}
     return result
 
 
@@ -366,7 +380,7 @@ def main(argv: list[str] | None = None) -> int:
     topic.add_argument("--out", default="data/private/topic-lead-assessment.json")
     topic.add_argument("--model", default="gpt-5-mini", help="Explicit paid model choice")
     research = commands.add_parser(
-        "research-v3-shadow", help="Opt-in public research + Investigator v3 + overseer; never publishes")
+        "research-v3-shadow", help="Opt-in public research + Investigator v3 + contract + Verifier; never publishes")
     research.add_argument("--context-file", required=True, help="Private Topic Lead context")
     research.add_argument("--captures-file", required=True, help="Matching trusted seed captures")
     research.add_argument("--policy-file", required=True, help="Approved publisher/feed policy JSON")
@@ -622,7 +636,9 @@ def main(argv: list[str] | None = None) -> int:
         with StoryLedger(arguments.db) as audit:
             metrics = audit.metrics()
             print(json.dumps({"metrics": metrics, "grades": grade_agents(metrics),
-                              "oversight": [p.to_dict() for p in OversightAgent().assess(metrics)]}, indent=2))
+                              "oversight": [p.to_dict() for p in ProcessOverseer().assess(metrics)],
+                              "process_overseer": ProcessOverseer().diagnose(
+                                  audit.diagnostic_events())}, indent=2))
         return 0
     if arguments.command == "collect":
         if not 1 <= arguments.max_markets <= 1000 or not 1 <= arguments.max_pages <= 100:

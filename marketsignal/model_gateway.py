@@ -127,7 +127,7 @@ STAGE_SCHEMAS = {
         "pitches": {"type": "array", "items": _pitch},
         "open_questions": _strings, "scores": _completed_investigator_scores,
     }),
-    "handoff_evidence_review": _closed_schema({
+    "dossier_evidence_verifier": _closed_schema({
         "judgments": {"type": "array", "items": _closed_schema({
             "claim_id": _string,
             "verdict": {"type": "string", "enum": ["supported", "contradicted", "insufficient"]},
@@ -280,8 +280,8 @@ STAGE_INSTRUCTIONS = {
         "Return ready_for_verifier only when a real dossier is evidence-grounded; NEVER claim independent "
         "semantic verification, publication permission or authenticated human editorial approval."
     ),
-    "handoff_evidence_review": (
-        "You are an independent source-first CHECKER at the investigator-to-verifier handoff. "
+    "dossier_evidence_verifier": (
+        "You are the independent, source-first DOSSIER VERIFIER after deterministic handoff validation. "
         "Do not trust the investigator's score, topic enthusiasm or narrative: they are deliberately "
         "absent from your input. For EACH provided material claim, examine the captured original "
         "source excerpts and return supported, contradicted or insufficient. Supply an EXACT "

@@ -20,7 +20,7 @@ model-generated reporting, semantic fact-checking or live-article publication
 has been activated. See the [v3 newsroom blueprint](docs/newsroom-v3.md) and
 the [enterprise agent-by-agent audit](docs/enterprise-newsroom-audit.md).
 An opt-in [Investigator v3](docs/investigator-v3.md) with a
-[multi-source retrieval/overseer mock](docs/public-retrieval-v1.md) is now
+[multi-source retrieval and separated review gates](docs/public-retrieval-v1.md) is now
 available for private research trials; it is **not** invoked by the daily
 collector or capable of automatic publication.
 
@@ -52,7 +52,7 @@ python -m marketsignal evaluate-agents --cases 120
 python -m marketsignal source-smoke --archive-dir data/archive
 python -m marketsignal investigate-archive --archive-file data/archive/2026-11-03.json
 python -m marketsignal newsroom-v3-demo
-# Explicit opt-in live public research + model review (requires curated private context,
+# Explicit opt-in live public research + provisional dossier Verifier (requires curated private context,
 # matching source captures, host rights policy and OPENAI_API_KEY):
 # python -m marketsignal research-v3-shadow --context-file data/private/topic-context.json --captures-file data/private/captured-context.json --policy-file data/private/research-policy.json --angle-id approved-angle-id
 python -m marketsignal field-trial --case data/private/your_research_case.json --out reports/field-trial.md

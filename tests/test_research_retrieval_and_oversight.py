@@ -3,15 +3,17 @@
 import unittest
 import json
 import tempfile
+from types import SimpleNamespace
 from dataclasses import replace
 from datetime import datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
+from unittest.mock import patch
 
 from marketsignal.agent_sources import CrossrefSearch, SourceLead
-from marketsignal.handoff_oversight import (
-    ClaimJudgment, HandoffOverseer, diagnose_handoff_failures,
-)
+from marketsignal.handoff_contract import HandoffContractGateway
+from marketsignal.evidence_verifier import ClaimJudgment, EvidenceVerifier, ModelClaimReview
+from marketsignal.oversight import ProcessFailureEvent, ProcessOverseer
 from marketsignal.investigator_v3 import ResearchBatch, ResearchLead
 from marketsignal.research_retrieval import (
     MultiSourceResearchProvider, OfficialFeedSearch, PublicOfficialFeedTransport,
@@ -192,45 +194,152 @@ class ResearchAndOversightTests(unittest.TestCase):
                 if label != "public_health":
                     self.assertFalse(provider.coverage_audit()["checks"]["official_record_captured"]["passed"])
 
-    def test_overseer_requires_separate_source_first_check_before_verifier(self):
+    def test_contract_is_structural_and_verifier_owns_claim_interpretation(self):
         investigation, _, _ = run_scenario("valid_story")
         captures = (source("seed_record"), source("initial_report", "independent_reporting"),
                     source("deep_record", "original_research"))
-        missing = HandoffOverseer().review(investigation, captures, coverage_summary="Prior reporting compared")
-        self.assertEqual(missing.status, "awaiting_independent_review")
+        contract = HandoffContractGateway().validate(investigation, captures, as_of=NOW)
+        self.assertEqual(contract.status, "to_verifier")
+        self.assertEqual(contract.claims_checked, 3)
+        self.assertEqual(contract.check_kind, "deterministic_contract_only")
+        missing = EvidenceVerifier().verify(
+            investigation, captures, contract, coverage_summary="Prior reporting compared")
+        self.assertEqual(missing.status, "awaiting_independent_verifier")
         reviewer = ScriptedEvidenceReviewer()
-        approved = HandoffOverseer(reviewer).review(
-            investigation, captures, coverage_summary="Prior reporting compared")
-        self.assertEqual(approved.status, "to_verifier")
+        approved = EvidenceVerifier(reviewer).verify(
+            investigation, captures, contract, coverage_summary="Prior reporting compared")
+        self.assertEqual(approved.status, "provisionally_verified")
         self.assertFalse(approved.publication_enabled)
         self.assertFalse(approved.authenticated_human_factcheck)
         self.assertEqual(approved.claims_reviewed, 3)
         self.assertTrue(all("scores" not in c for c in reviewer.payloads[0][0]))
-        contradicted = HandoffOverseer(ScriptedEvidenceReviewer("contradicted")).review(
-            investigation, captures, coverage_summary="Prior reporting compared")
+        contradicted = EvidenceVerifier(ScriptedEvidenceReviewer("contradicted")).verify(
+            investigation, captures, contract, coverage_summary="Prior reporting compared")
         self.assertEqual(contradicted.status, "return_to_investigator")
         self.assertEqual(len(contradicted.issues), 3)
-        broken = HandoffOverseer(ScriptedEvidenceReviewer(wrong_excerpt=True)).review(
-            investigation, captures, coverage_summary="Prior reporting compared")
-        self.assertTrue(any(issue.reason_code == "review_citation_invalid"
+        broken = EvidenceVerifier(ScriptedEvidenceReviewer(wrong_excerpt=True)).verify(
+            investigation, captures, contract, coverage_summary="Prior reporting compared")
+        self.assertTrue(any(issue.reason_code == "verifier_citation_invalid"
                             for issue in broken.issues))
-        tampered = HandoffOverseer(reviewer).review(
+        tampered = HandoffContractGateway().validate(
             investigation, (replace(captures[0], excerpt=captures[0].excerpt + " changed"),) +
-            captures[1:], coverage_summary="Prior reporting compared")
+            captures[1:], as_of=NOW)
         self.assertTrue(any(issue.reason_code == "source_manifest_mismatch"
                             for issue in tampered.issues))
 
-    def test_overseer_feedback_is_diagnostic_only(self):
-        investigation, _, _ = run_scenario("valid_story")
-        captures = (source("seed_record"), source("initial_report", "independent_reporting"),
-                    source("deep_record", "original_research"))
-        reviews = [replace(HandoffOverseer().review(investigation, captures,
-                                                   coverage_summary="Prior coverage"),
-                           case_id=f"case_{n}") for n in range(5)]
-        diagnosis = diagnose_handoff_failures(reviews)
+    def test_overseer_diagnoses_distinct_cases_without_becoming_verifier(self):
+        events = tuple(ProcessFailureEvent(f"case_{n}", "contract_gateway",
+                                           "source_manifest_mismatch", occurred_at=NOW)
+                       for n in range(5))
+        diagnosis = ProcessOverseer().diagnose(events)
         self.assertEqual(len(diagnosis["proposals"]), 1)
         self.assertTrue(diagnosis["proposals"][0]["owner_approval_required"])
         self.assertFalse(diagnosis["automatic_prompt_edits"])
+        self.assertEqual(diagnosis["proposals"][0]["distinct_affected_cases"], 5)
+        self.assertIn("held_out_regression_cases", diagnosis["proposals"][0]["required_tests"])
+        # Repeated failures within one case are notable, but not cross-case evidence.
+        repeated = ProcessOverseer().diagnose(events[:1] * 5)
+        self.assertFalse(repeated["proposals"])
+        self.assertEqual(repeated["repeated_case_failures"][0]["count"], 5)
+        suspicious = tuple(ProcessFailureEvent(
+            f"suspicious_{n}", "investigator_v3", "provisional_dossier_ready",
+            investigator_self_score=100, source_count=0, finding_count=0)
+            for n in range(3))
+        diagnostics = ProcessOverseer().diagnose(suspicious)
+        self.assertEqual(diagnostics["proposals"][0]["failure_code"],
+                         "self_score_evidence_mismatch")
+        self.assertFalse(diagnostics["semantic_truth_certified"])
+
+    def test_gateway_rejects_invented_ids_future_sources_and_social_claims(self):
+        investigation, _, _ = run_scenario("valid_story")
+        captures = (source("seed_record"), source("initial_report", "independent_reporting"),
+                    source("deep_record", "original_research"))
+        invented = {**investigation, "dossier": {
+            **investigation["dossier"], "findings": [
+                {**investigation["dossier"]["findings"][0], "source_ids": ["invented_id"]},
+                *investigation["dossier"]["findings"][1:]]}}
+        result = HandoffContractGateway().validate(invented, captures, as_of=NOW)
+        self.assertIn("unavailable_cited_source", {i.reason_code for i in result.issues})
+        future = HandoffContractGateway().validate(investigation, captures, as_of=NOW - 1000000)
+        self.assertIn("source_postdates_case_as_of", {i.reason_code for i in future.issues})
+        bad_timeline = {**investigation, "dossier": {
+            **investigation["dossier"], "timeline": [{"at": NOW + 1,
+                                                      "claim_ids": ["invented_claim"]}]}}
+        timeline = HandoffContractGateway().validate(bad_timeline, captures, as_of=NOW)
+        self.assertIn("invalid_timeline_reference", {i.reason_code for i in timeline.issues})
+        absent = {**investigation, "dossier": {**investigation["dossier"], "findings": []},
+                  "completed_rubric": {"total": 100}}
+        empty = HandoffContractGateway().validate(absent, captures, as_of=NOW)
+        self.assertIn("missing_material_claims", {i.reason_code for i in empty.issues})
+
+    def test_model_claim_review_is_owned_by_verifier_stage(self):
+        class RecordingModel:
+            def __init__(self):
+                self.stages = []
+
+            def complete(self, stage, payload):
+                self.stages.append(stage)
+                return {"judgments": []}
+
+        model = RecordingModel()
+        ModelClaimReview(model).assess((), (), "Prior coverage")
+        self.assertEqual(model.stages, ["dossier_evidence_verifier"])
+
+    def test_shadow_go_calls_only_one_semantic_dossier_verifier_after_contract(self):
+        report, _, _ = run_scenario("valid_story")
+        case = topic_context()
+        report["case_id"] = case.story_id
+        captures = (source("seed_record"), source("initial_report", "independent_reporting"),
+                    source("deep_record", "original_research"))
+
+        class FakeResearch:
+            pass
+
+        fake_research = FakeResearch()
+        fake_research.captures = {s.source_id: s for s in captures[1:]}
+
+        class FakeInvestigator:
+            def __init__(self, model, research):
+                pass
+
+            def run(self, assignment):
+                return report
+
+        class StageModel:
+            def __init__(self, verdict):
+                self.verdict, self.calls = verdict, []
+
+            def complete(self, stage, payload):
+                self.calls.append(stage)
+                if stage == "topic_lead":
+                    return topic_proposal()
+                if stage == "dossier_evidence_verifier":
+                    lookup = {s["source_id"]: s["excerpt"] for s in payload["sources"]}
+                    return {"judgments": [{
+                        "claim_id": c["claim_id"], "verdict": self.verdict,
+                        "source_id": c["source_ids"][0],
+                        "exact_evidence": lookup[c["source_ids"][0]][:40],
+                        "rationale": "A provisional, deliberately scripted source assessment.",
+                    } for c in payload["claims"]]}
+                raise AssertionError("Unexpected second semantic review: " + stage)
+
+        with (patch("marketsignal.research_runtime.assignment_from_topic_lead",
+                    return_value=SimpleNamespace(coverage_summary="Prior coverage")),
+              patch("marketsignal.research_runtime.configure_research_sources",
+                    return_value=fake_research),
+              patch("marketsignal.research_runtime.InvestigatorV3", FakeInvestigator)):
+            for verdict, expected in (("supported", "provisionally_verified_for_editorial_review"),
+                                      ("contradicted", "held_pending_research_or_review")):
+                model = StageModel(verdict)
+                result = run_research_shadow(case, captures[:1], angle_id="timeline-delay",
+                                             research_policy={}, model=model)
+                self.assertEqual(model.calls, ["topic_lead", "dossier_evidence_verifier"])
+                self.assertEqual(result["handoff_contract"]["status"], "to_verifier")
+                self.assertEqual(result["status"], expected)
+                self.assertFalse(result["publication_enabled"])
+                if verdict == "contradicted":
+                    self.assertIn("claim_contradicted", {
+                        e["reason_code"] for e in result["process_events"]})
 
     def test_explicit_private_runtime_configuration_and_existing_capture_rows(self):
         provider = configure_research_sources({
@@ -271,6 +380,8 @@ class ResearchAndOversightTests(unittest.TestCase):
         self.assertEqual(result["status"], "topic_lead_held")
         self.assertEqual(model.calls, ["topic_lead"])
         self.assertFalse(result["publication_enabled"])
+        self.assertEqual(result["process_events"][0]["stage"], "topic_lead")
+        self.assertFalse(result["process_overseer"]["proposals"])
 
 
 if __name__ == "__main__":

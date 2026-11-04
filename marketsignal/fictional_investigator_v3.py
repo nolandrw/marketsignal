@@ -1,13 +1,14 @@
 """Fictional, zero-network v3 integration fixture for the active shadow demo.
 
-This intentionally uses scripted answers so it can test Topic Lead ->
-Investigator v3 -> independent handoff overseer without API charges. It is
+This intentionally uses scripted answers to test Topic Lead -> Investigator v3
+-> Contract Gateway -> Verifier without API charges. A scripted Verifier is
 NEVER evidence that automated fact checking or real reporting has succeeded.
 """
 
 from __future__ import annotations
 
-from .handoff_oversight import ClaimJudgment, HandoffOverseer
+from .handoff_contract import HandoffContractGateway
+from .evidence_verifier import ClaimJudgment, EvidenceVerifier
 from .investigator_v3 import (
     COMPLETED_CRITERIA, PRELIMINARY_CRITERIA, InvestigatorV3,
     ResearchBatch, ResearchCapture, ResearchLead, assignment_from_topic_lead,
@@ -127,6 +128,9 @@ def run_fictional_v3_handoff(context, topic, documents):
     assignment = assignment_from_topic_lead(context, topic, captures, angle_id="review-delay")
     provider = FictionalResearch(context.as_of)
     result = InvestigatorV3(FictionalV3Model(), provider).run(assignment)
-    review = HandoffOverseer(FictionalIndependentReview()).review(
-        result, captures + (provider.new_document,), coverage_summary=assignment.coverage_summary)
-    return result, review
+    originals = captures + (provider.new_document,)
+    contract = HandoffContractGateway().validate(
+        result, originals, as_of=context.as_of, expected_case_id=context.story_id)
+    review = EvidenceVerifier(FictionalIndependentReview()).verify(
+        result, originals, contract, coverage_summary=assignment.coverage_summary)
+    return result, contract, review
