@@ -1,15 +1,16 @@
-# First real-topic shadow trial: Texas early voting, November 2026
+# Texas real-topic shadow trial: editorial re-commission, November 2026
 
 This is the next milestone after the fictional newsroom architecture test:
-**can we produce an original, contextual article based on actual reporting,
+**can we produce a contextual article based on actual reporting,
 while preserving source-level accountability and declining to claim facts
 we have not verified?**
 
 ## Status
 
 - Source-led, human-curated reporting brief: **complete**.
-- Original contextual shadow article: **complete**, not published.
-- Link/claim/quotation/as-of/rights structural checks: **10/10 pass**.
+- Re-commissioned narrative shadow article: **complete**, not published.
+- Link/claim/quotation/as-of/rights/story-thesis structural checks: **11/11 pass**.
+- Independent editorial originality and reader-value score: **not performed**.
 - Independent semantic fact-check: **not performed**.
 - Validated movement in the underlying prediction market: **not available**.
 - Editorial result: **HELD**, never an article-publication payload.
@@ -26,26 +27,31 @@ The command does no API calls, costs nothing, and outputs a Markdown preview
 to the ignored local `reports/` folder. It refuses to write to `site/`,
 `archive/`, or `docs/`. The **real** case JSON is held privately in ignored
 `data/private/` (and is not shipped in the GitHub repository). A separate
-fictional demonstration fixture is included in CI. A case JSON includes each source's publication date,
-publisher, origin, a small excerpt, a claim inventory with supporting excerpt
-matches, seven source-linked paragraphs, and questions for further reporting.
+fictional demonstration fixture is included in CI. A case JSON includes each
+source's publication date, publisher, origin, a small excerpt, a claim inventory
+with supporting excerpt matches, multiple investigative `story_pitches`, a
+chief-editor `editorial_selection`, source-linked paragraphs and open questions.
+
+See [story thesis handoff v1](story-thesis-v1.md) for the newsroom changes.
 
 ## The substantive story we tested
 
-An exceptionally large early vote in Texas seemed to coexist with a more
-competitive Senate race than the state's long Republican statewide streak
-would ordinarily imply. An original analysis of these conflicting clues
-needs to distinguish three questions:
+The **first** shadow story centered on voter-turnout uncertainty. We spiked
+that angle as insufficiently compelling despite its structural audit passing.
+The re-commissioned angle is **a $400 million Senate campaign testing Texas's
+32-year Republican statewide winning streak**. Its narrative rests on:
 
-1. **What changed?** Preliminary reports put advance voting above 7.7
-   million; the Texas secretary of state earlier counted more than 4.2
-   million in the first six days.
-2. **What did people expect?** A Democrat had not won a Texas statewide
-   office since 1994, yet the late university-compiled poll tracker included
-   a New York Times/Siena survey favoring the Democrat by seven points.
-3. **What does it mean?** High turnout alone does not tell us which party
-   benefited; geographic returns and the composition of new versus
-   shifted early voters are key uncertainties.
+1. **Historical expectation:** no Texas Democrat has won statewide since
+   1994, yet several late polls indicated an unusually close Senate contest.
+2. **Verifiable conflict:** the campaigns have spent a combined $408 million
+   on advertising and made contrasting appeals to identity, economic interest
+   and religious values.
+3. **Reporting tension:** the Republican nominee himself warned that the
+   state could slip away; an independent outlet described difficulty uniting
+   his own party. Neither proves a specific causal mechanism or election result.
+4. **Counterevidence:** polls have sampling uncertainty; turnout totals do
+   not identify voters' preferences; actual results remain unknown at the
+   shadow's as-of cutoff.
 
 Primary research and contemporary reporting:
 
@@ -55,6 +61,8 @@ Primary research and contemporary reporting:
 - [Texas Tribune's early-vote analysis](https://www.texastribune.org/2026/10/31/texas-early-voting-turnout-rate-election-2026/)
 - [Texas Tribune's cautions about reading turnout](https://www.texastribune.org/2026/10/20/texas-early-voting-records-election/)
 - [Associated Press's historical context](https://apnews.com/article/66df71a7c2bfa962cffd4134ef1a0364)
+- [Associated Press's closing-day candidate remarks](https://apnews.com/article/trump-vance-midterm-elections-0f444fe8f424960dd820795e20b00237)
+- [Texas Tribune's campaign spending and message analysis](https://www.texastribune.org/2026/10/31/texas-us-senate-election-paxton-talarico-final-push-election-day/)
 - [MarketSignal's Nov. 3 morning market snapshot](https://github.com/nolandrw/marketsignal/blob/main/data/archive/2026-11-03.json)
 
 The market snapshot recorded a Democratic Yes quote but **zero new
@@ -65,12 +73,14 @@ success.
 
 ## What we learned from the field trial
 
-The promising part is that the evidence can support a much better angle than
-"Prediction market moves X%." The article's stakes are clear: whether a
-historically stable political pattern may be changing and how much can be
-inferred from early turnout. The article can explain the prior consensus,
-present a plausible change, offer multiple theories, and provide useful
-counterevidence without claiming a cause.
+The original article demonstrated a **story-selection failure**: a perfectly
+cautious, citation-linked explanation may still be uninteresting. A good
+general-interest article needs a concrete development, specific conflict,
+characters, surprising tension and credible stakes. The new handoff requires
+multiple story theses and explicitly documents why the editor preferred one.
+The new title belongs to the editor rather than being frozen at the
+investigator's first suggestion. This trial remains derivative of existing
+reporting; it has not established enough original value for publication.
 
 The limiting factor is **semantic source verification**. Our `field_trial`
 auditor detects missing citations, source mismatches, invented quotation text,
