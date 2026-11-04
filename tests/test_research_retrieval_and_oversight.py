@@ -350,11 +350,15 @@ class ResearchAndOversightTests(unittest.TestCase):
                                           "Test-only human-selected subject without fabricated prices")
             seeded_model = StageModel("supported")
             seeded = run_research_shadow(seeded_case, captures[:1],
-                                         angle_id="timeline-delay", research_policy={},
+                                         angle_id="auto:first", research_policy={},
                                          model=seeded_model, test_fixture=fixture)
             self.assertEqual(seeded["status"], "provisionally_verified_for_editorial_review")
             self.assertTrue(seeded["evaluation_only"])
+            self.assertEqual(seeded["topic_lead"]["selected_angle_id"], "timeline-delay")
             self.assertEqual(seeded_model.calls, ["topic_lead", "dossier_evidence_verifier"])
+            with self.assertRaises(ValueError):
+                run_research_shadow(case, captures[:1], angle_id="auto:first",
+                                    research_policy={}, model=StageModel("supported"))
 
     def test_explicit_private_runtime_configuration_and_existing_capture_rows(self):
         provider = configure_research_sources({

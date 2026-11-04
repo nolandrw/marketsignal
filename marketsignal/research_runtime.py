@@ -88,6 +88,8 @@ def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
                         *, angle_id: str, research_policy: dict, model,
                         test_fixture: ResearchTestFixture | None = None) -> dict:
     """Live-readonly source collection + model stages only when caller opts in."""
+    if angle_id == "auto:first" and test_fixture is None:
+        raise ValueError("Automatic angle choice is permitted only in evaluation fixtures")
     events: list[ProcessFailureEvent] = []
 
     def log(stage: str, reason: str, *, score=None, sources=None, findings=None):
@@ -109,8 +111,11 @@ def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
                           "evidence_verifier": None, "status": "topic_lead_held",
                           "publication_enabled": False,
                           "evaluation_only": bool(test_fixture)})
+    # Evaluation should test what the Topic Lead actually proposes. Select its
+    # first candidate deterministically; do not invent or guess its angle ID.
+    selected_angle_id = topic.angles[0].angle_id if angle_id == "auto:first" else angle_id
     assignment = assignment_from_topic_lead(context, topic, captures,
-                                            angle_id=angle_id, research_mode="live_shadow")
+                                            angle_id=selected_angle_id, research_mode="live_shadow")
     research = configure_research_sources(research_policy)
     investigation = InvestigatorV3(model, research).run(assignment)
     all_captures = tuple({s.source_id: s for s in captures + tuple(research.captures.values())}.values())
@@ -137,7 +142,7 @@ def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
             log("dossier_verifier", "provisionally_verified")
     return annotated({"case_id": context.story_id, "topic_lead": {
                 "disposition": topic.disposition, "score": topic.score,
-                "selected_angle_id": angle_id},
+                "selected_angle_id": selected_angle_id},
             "investigator": investigation,
             "handoff_contract": contract.to_dict(),
             "evidence_verifier": verification.to_dict() if verification else None,

@@ -1,0 +1,66 @@
+name: Four-case research pilot (manual, unpublished)
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider_hard_limit_confirmed:
+        description: 'I configured a dedicated API project with a $2 enforced hard spend limit'
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: marketsignal-paid-research-pilot
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    if: ${{ inputs.provider_hard_limit_confirmed == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    environment: research-pilot
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      MARKETSIGNAL_PILOT_BUNDLE_B64: ${{ secrets.MARKETSIGNAL_PILOT_BUNDLE_B64 }}
+      MARKETSIGNAL_PILOT_RESULTS_PASSPHRASE: ${{ secrets.MARKETSIGNAL_PILOT_RESULTS_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require all three secrets before any paid call
+        run: |
+          test -n "$OPENAI_API_KEY"
+          test -n "$MARKETSIGNAL_PILOT_BUNDLE_B64"
+          test -n "$MARKETSIGNAL_PILOT_RESULTS_PASSPHRASE"
+      - name: Run regression tests first
+        run: python -m unittest discover -s tests -q
+      - name: Run four bounded, unpublished research cases
+        id: research
+        run: python -m scripts.run_research_pilot run-from-secret
+      - name: Encrypt private research artifacts
+        if: ${{ always() && steps.research.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          files=()
+          if [ -d data/private/pilot-results ]; then files+=(data/private/pilot-results); fi
+          if [ -f data/private/pilot-model-budget.sqlite ]; then files+=(data/private/pilot-model-budget.sqlite); fi
+          if [ ${#files[@]} -gt 0 ]; then
+            tar -czf pilot-results.tar.gz "${files[@]}"
+            printf '%s' "$MARKETSIGNAL_PILOT_RESULTS_PASSPHRASE" |
+              gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+                  --cipher-algo AES256 --symmetric --output pilot-results.tar.gz.gpg pilot-results.tar.gz
+            rm pilot-results.tar.gz
+          fi
+      - name: Retain only encrypted output for seven days
+        if: ${{ always() && steps.research.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketsignal-research-pilot-encrypted
+          path: pilot-results.tar.gz.gpg
+          if-no-files-found: ignore
+          retention-days: 7

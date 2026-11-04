@@ -24,8 +24,9 @@ An opt-in [Investigator v3](docs/investigator-v3.md) with a
 available for private research trials; it is **not** invoked by the daily
 collector or capable of automatic publication.
 An explicit [test-only real-case evaluation route](docs/real-case-evaluation-v1.md)
+and a [manual $2 four-story research-pilot operating procedure](docs/research-pilot-ops.md)
 can exercise handpicked subjects without inventing missing market-price history;
-it does not add a permanent human editorial intake or bypass source/release gates.
+neither adds a permanent human editorial intake or bypasses source/release gates.
 
 MarketSignal is a portfolio-oriented, auditable pipeline for detecting meaningful
 changes in prediction-market contracts. It is designed to become a bounded
