@@ -17,7 +17,8 @@ explicit bounded editorial state machine, claim review contracts, fictional
 end-to-end shadow rehearsal, an eight-persona structural diagnostic panel,
 private audit/oversight, and a human-label-only offline ML challenger. No
 model-generated reporting, semantic fact-checking or live-article publication
-has been activated. See the [v3 newsroom blueprint](docs/newsroom-v3.md).
+has been activated. See the [v3 newsroom blueprint](docs/newsroom-v3.md) and
+the [enterprise agent-by-agent audit](docs/enterprise-newsroom-audit.md).
 
 MarketSignal is a portfolio-oriented, auditable pipeline for detecting meaningful
 changes in prediction-market contracts. It is designed to become a bounded
