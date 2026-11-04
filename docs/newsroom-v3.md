@@ -1,10 +1,14 @@
 # Newsroom v3: contracts, operating rules and staged launch
 
-**Implementation status (2026-11-03):** An offline, $0 infrastructure and
-fictional workflow test are implemented. Actual model researchers, editorial
-judgment, semantic fact-checking, real reader feedback and publication of
-reported stories are **not** implemented. The daily GitHub Pages dashboard is
-data-only. No agent has publishing credentials.
+**Implementation status (2026-11-04):** An offline, $0 infrastructure and
+fictional workflow test are implemented. The Topic Lead now has versioned model
+instructions, a structured source/coverage handoff, a deterministic decision
+gate, an opt-in model CLI, and offline regression cases. **This does not mean**
+that autonomous topic research, authentic editorial judgment, semantic
+fact-checking, real reader feedback or reported-article publication are live.
+The Topic Lead requires a privately curated source packet and a checked prior
+coverage index. The daily GitHub Pages dashboard is data-only. No agent has
+publishing credentials.
 
 ## Editorial mission
 
@@ -104,19 +108,25 @@ statistically significant simply because of a threshold.
 
 ### 2. Topic lead
 
-**Input:** quantitative pitch, market terms/resolution, recent article index,
-prior coverage and contextual source IDs. **Output:** topical evaluation,
-duplication analysis, preliminary research assignment. The fixed rubric in
-code is **consequence 25, new development 20, narrative potential 15, public
-relevance 15, novelty 15, feasibility 10**. Scores below 55/100, zero new
-development or absent source provenance do not commission an investigation.
+**Input:** quantitative pitch, market terms/resolution, captured source leads,
+and an independently checked recent article index. **Output:** a bounded,
+provisional newspaper pitch with competing angles, explicit disconfirmation
+tests, source IDs, counterevidence, research requests and GO/HOLD/SPIKE outcome.
+The fixed rubric in code is **news peg 20, consequences 20, editorial potential
+20, original contribution 15, research feasibility 15, timeliness 10**.
+GO requires at least 65/100 **and** separate hard gates. An unexplained market
+movement is held for bounded research; high-consequence uncertain stories
+can also be held rather than prematurely spiked. Duplicate checking is by
+editorial angle, not simply subject matter.
 
 - Process: grounding 30; duplicate search 20; explicit stakes 20;
   counterexamples 15; disciplined handoff 15.
 - Result: independently judged story selection 35; false-positive avoidance
   25; novelty 20; diversity across categories 10; timeliness 10.
 - Do not confuse a popular betting event with an actual new development.
-  An archival similarity index is specified, but not yet implemented.
+  The Topic Lead's assessment is **not** an independently verified research
+  verdict. A real connected archival similarity index is still missing.
+- Full operating contract, field definitions and CLI: [topic-lead-v2.md](topic-lead-v2.md).
 
 ### 3. Investigative journalist
 
