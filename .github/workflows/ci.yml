@@ -35,6 +35,13 @@ jobs:
           python -m marketsignal field-trial \
             --case tests/fixtures/fictional_field_trial.json \
             --out reports/fictional-shadow.md > field-trial-audit.json
+      - name: Exercise replayed investigator-verifier-editor-writer shadow loop
+        run: |
+          python -m marketsignal shadow-loop \
+            --mode replay \
+            --case tests/fixtures/fictional_field_trial.json \
+            --out reports/editorial-loop-fictional.md \
+            --trace reports/editorial-loop-fictional.json
       - name: Probe free public research endpoints (diagnostic only)
         if: github.event_name == 'push'
         continue-on-error: true
