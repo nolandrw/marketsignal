@@ -4,6 +4,11 @@
 feature workflow and a structured prompt specification; no model service, full
 source-retrieval agent, or autonomous article publication is yet connected.
 
+**Editorial addendum:** [Story thesis handoff v1](story-thesis-v1.md) adds a
+mandatory multi-pitch investigation and editor-owned angle/headline selection
+before commissioning a draft. It supersedes the older single
+`proposed_headline` handoff wherever they differ.
+
 The daily shadow job now also generates genuine-market reporting assignments
 with `python -m marketsignal assign-context --archive-file PATH`; without
 direct source captures these correctly remain `needs_context`. It does not
