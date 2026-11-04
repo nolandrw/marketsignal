@@ -7,8 +7,10 @@ news thresholds and release policies require owner approval and evaluation.
 
 from __future__ import annotations
 
+from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from collections.abc import Sequence
+import hashlib
 
 
 DEFAULT_PERSONAS = (
@@ -169,6 +171,110 @@ class OversightAgent:
         if not lower <= value <= upper:
             raise ValueError("Existing setting outside approved safety bounds")
         return {**settings, key: round(min(upper, value + 0.25), 2)}
+
+
+# Failure signatures are operational hypotheses, not semantic truth labels.
+# The Overseer may propose a repair but may not approve its own proposal.
+PROCESS_FAILURE_HYPOTHESES = {
+    "source_manifest_mismatch": ("capture_contract", "Capture serialization or source lineage drift",
+                                 "Version the manifest serializer and add source-roundtrip tests"),
+    "source_id_set_mismatch": ("capture_contract", "Handoff lost or duplicated source identities",
+                               "Test source-ID propagation across research rounds"),
+    "unavailable_cited_source": ("source_provenance", "Findings cite uncaptured or disallowed sources",
+                                 "Add a citation-reference validation fixture"),
+    "verifier_citation_invalid": ("verifier_output", "Verifier citations fail exact-passage contract",
+                                  "Test quote extraction and model structured-output contract"),
+    "independent_verifier_failure": ("model_runtime", "Verifier adapter or provider failed",
+                                     "Reproduce provider response and bounded retry handling"),
+    "source_timeout": ("retrieval_runtime", "Recurring source timeout or transport instability",
+                       "Compare bounded retry/backoff changes in replay"),
+    "provider_budget_exhausted": ("retrieval_budget", "Repeated provider-budget exhaustion",
+                                  "Replay query routing against frozen search budgets"),
+    "research_revision_budget_exhausted": ("workflow_loop", "Repeated unverifiable research loops",
+                                           "Review return-ticket specificity with unchanged hard ceilings"),
+    "self_score_evidence_mismatch": ("rubric_gaming", "High self-score despite missing material evidence",
+                                     "Replay hard evidence prerequisites and rubric instructions"),
+}
+
+
+@dataclass(frozen=True)
+class ProcessFailureEvent:
+    case_id: str
+    stage: str
+    reason_code: str
+    occurred_at: int = 0
+    prompt_version: str = "unrecorded"
+    input_artifact_id: str = "unrecorded"
+    output_artifact_id: str = "unrecorded"
+    investigator_self_score: float | None = None
+    source_count: int | None = None
+    finding_count: int | None = None
+
+
+class ProcessOverseer(OversightAgent):
+    """Unified operational oversight and cross-case diagnostics, never truth review.
+
+    The older OversightAgent name remains as a compatibility base for ledger
+    metric consumers. New orchestration should use ProcessOverseer for both.
+    """
+
+    VERSION = "process-overseer-v1"
+
+    def diagnose(self, events: Sequence[ProcessFailureEvent], *, minimum_cases: int = 3) -> dict:
+        if minimum_cases < 3 or len(events) > 10000 or any(
+                not isinstance(e, ProcessFailureEvent) or
+                not isinstance(e.case_id, str) or not e.case_id.strip() or
+                not isinstance(e.stage, str) or not e.stage.strip() or
+                not isinstance(e.reason_code, str) or not e.reason_code.strip() or
+                (e.investigator_self_score is not None and not isinstance(
+                    e.investigator_self_score, (int, float))) or
+                (e.source_count is not None and not isinstance(e.source_count, int)) or
+                (e.finding_count is not None and not isinstance(e.finding_count, int))
+                for e in events):
+            raise ValueError("Invalid or unbounded diagnostic event stream")
+        cases = {event.case_id for event in events}
+        grouped: dict[str, set[str]] = defaultdict(set)
+        repeats: Counter[tuple[str, str]] = Counter()
+        for event in events:
+            grouped[event.reason_code].add(event.case_id)
+            repeats[(event.case_id, event.reason_code)] += 1
+            if (event.investigator_self_score is not None and
+                    event.investigator_self_score >= 90 and
+                    (event.source_count == 0 or event.finding_count == 0)):
+                grouped["self_score_evidence_mismatch"].add(event.case_id)
+                repeats[(event.case_id, "self_score_evidence_mismatch")] += 1
+        proposals = []
+        for code, affected in sorted(grouped.items()):
+            if code not in PROCESS_FAILURE_HYPOTHESES or len(affected) < minimum_cases:
+                continue
+            category, hypothesis, experiment = PROCESS_FAILURE_HYPOTHESES[code]
+            proposal_id = hashlib.sha256(f"{self.VERSION}:{code}".encode()).hexdigest()[:16]
+            proposals.append({
+                "proposal_id": proposal_id, "version": self.VERSION,
+                "category": category, "failure_code": code,
+                "distinct_affected_cases": len(affected),
+                "root_cause_hypothesis": hypothesis,
+                "proposed_experiment": experiment,
+                "success_metric": "Reduce failure rate on held-out cases without increasing false passes",
+                "required_tests": ["frozen_control_replay", "held_out_regression_cases",
+                                   "independent_quality_review"],
+                "regression_risks": ["false_acceptance", "missing_disconfirmation",
+                                     "weakened_source_or_release_gates"],
+                "status": "proposed_unapplied", "owner_approval_required": True,
+            })
+        return {
+            "version": self.VERSION, "cases_observed": len(cases),
+            "event_count": len(events),
+            "reason_case_counts": {code: len(affected) for code, affected in sorted(grouped.items())},
+            "repeated_case_failures": [
+                {"case_id": cid, "reason_code": code, "count": count}
+                for (cid, code), count in sorted(repeats.items())
+                if count >= 3 and code in PROCESS_FAILURE_HYPOTHESES
+            ],
+            "proposals": proposals, "automatic_prompt_edits": False,
+            "policy_changes_allowed": False, "publication_enabled": False,
+            "semantic_truth_certified": False,
+        }
 
 
 def grade_agents(ledger_metrics: dict, minimum_samples: int = 20,

@@ -273,6 +273,15 @@ class InvestigatorV3Tests(unittest.TestCase):
         new_case, _, _ = run_scenario("unrelated_new_case")
         self.assertIn("unreviewed_new_topic", new_case["reason"])
 
+    def test_live_shadow_can_use_later_capture_of_preexisting_public_record(self):
+        case = assignment(research_mode="live_shadow")
+        result = InvestigatorV3(ScriptedModel("future_capture"),
+                                ScriptedResearch("future_capture")).run(case)
+        self.assertEqual(result["disposition"], "ready_for_verifier")
+        self.assertTrue(any(s["captured_after_case_as_of"]
+                            for s in result["source_manifest"]))
+        self.assertEqual(run_scenario("future_capture")[0]["disposition"], "hold")
+
     def test_topic_lead_handoff_requires_selected_angle_and_matching_captures(self):
         capture = source("seed_record")
         lead = SimpleNamespace(source_id=capture.source_id, url=capture.url,

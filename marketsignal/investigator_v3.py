@@ -9,6 +9,7 @@ research retrieval and human/editorial grading are separate integrations.
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import asdict, dataclass
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -95,6 +96,7 @@ def rubric_contract(stage: str) -> dict:
 
 DEEP_THRESHOLD = 70
 COMPLETED_REVIEW_THRESHOLD = 75
+MAX_LIVE_CAPTURE_DELAY = 30 * 60
 RELIABLE_SOURCE_KINDS = {"official_record", "original_research", "independent_reporting", "statement"}
 ALLOWED_SOURCE_KINDS = RELIABLE_SOURCE_KINDS | {"social_comment", "market_comment"}
 ARTIFACT_EVIDENCE_REFS = {"artifact:research_plan", "artifact:coverage_index", "artifact:research_log"}
@@ -118,7 +120,7 @@ class ResearchCapture:
                 parts.username or parts.password or parts.fragment)
         except ValueError:
             safe_url = False
-        if (not self.source_id.isidentifier() or len(self.source_id) > 60 or
+        if (not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,59}", self.source_id) or
                 not safe_url or len(self.url) > 1500 or
                 not self.publisher.strip() or not self.origin_key.strip() or
                 self.source_kind not in ALLOWED_SOURCE_KINDS or
@@ -138,22 +140,28 @@ class InvestigatorAssignment:
     coverage_summary: str
     seed_sources: tuple[ResearchCapture, ...]
     research_questions: tuple[str, ...] = ()
+    research_mode: str = "historical_replay"  # or live_shadow
 
     def __post_init__(self):
         if (not self.case_id or not self.topic.strip() or
                 not self.topic_lead_angle.strip() or
                 not isinstance(self.as_of, int) or self.as_of <= 0 or
+                self.research_mode not in {"historical_replay", "live_shadow"} or
                 len(self.seed_sources) > 15 or
                 len(self.research_questions) > 12 or
                 any(not isinstance(q, str) or not q.strip() or len(q) > 500
                     for q in self.research_questions) or
-                any(s.captured_at > self.as_of for s in self.seed_sources) or
+                any(s.published_at > self.as_of or
+                    s.captured_at > self.as_of + (MAX_LIVE_CAPTURE_DELAY
+                                                  if self.research_mode == "live_shadow" else 0)
+                    for s in self.seed_sources) or
                 len({s.source_id for s in self.seed_sources}) != len(self.seed_sources)):
             raise ValueError("Invalid Investigator assignment or source clock")
 
 
 def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapture, ...],
-                               *, angle_id: str) -> InvestigatorAssignment:
+                               *, angle_id: str,
+                               research_mode: str = "historical_replay") -> InvestigatorAssignment:
     """Create a typed investigation brief without upgrading metadata to evidence.
 
     Source IDs must match the captured, dated material already shown to the
@@ -193,6 +201,7 @@ def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapt
         topic_lead_disposition=assessment.disposition,
         topic_lead_score=assessment.score, coverage_summary=coverage,
         seed_sources=captures, research_questions=assessment.research_questions,
+        research_mode=research_mode,
     )
 
 
@@ -201,7 +210,36 @@ class InvestigatorModel(Protocol):
 
 
 class ReadOnlyResearchProvider(Protocol):
-    def search(self, query: str, *, as_of: int, limit: int) -> tuple[ResearchCapture, ...]: ...
+    def search(self, query: str, *, as_of: int, limit: int) -> tuple[ResearchCapture, ...] | ResearchBatch: ...
+
+
+@dataclass(frozen=True)
+class ResearchLead:
+    """Unverified search result: useful for hypothesis generation, never claim proof."""
+
+    platform: str
+    url: str
+    title: str
+    published_at: int
+    source_role: str  # coverage | official_lead | research_lead | discussion
+    origin_key: str = ""
+
+    def __post_init__(self):
+        if (self.source_role not in {"coverage", "official_lead", "research_lead", "discussion"}
+                or not self.platform.strip() or not self.title.strip()
+                or len(self.title) > 300 or not 0 < self.published_at
+                or not self.url.startswith("https://") or len(self.url) > 1500):
+            raise ValueError("Invalid discovery-only lead")
+
+
+@dataclass(frozen=True)
+class ResearchBatch:
+    """Discovery hints and independently captured documents are kept separate."""
+
+    captures: tuple[ResearchCapture, ...]
+    leads: tuple[ResearchLead, ...]
+    sources_attempted: tuple[str, ...] = ()
+    source_errors: tuple[str, ...] = ()
 
 
 def validate_scorecard(raw: object, weights: dict[str, int],
@@ -346,6 +384,7 @@ class InvestigatorV3:
 
     def run(self, assignment: InvestigatorAssignment) -> dict:
         sources = {s.source_id: s for s in assignment.seed_sources}
+        leads: dict[str, ResearchLead] = {}
         queries: list[str] = []
         trace: list[dict] = []
 
@@ -356,25 +395,47 @@ class InvestigatorV3:
                     "reason": reason, "preliminary_rubric": preliminary,
                     "completed_rubric": completed, "dossier": dossier,
                     "source_ids": sorted(sources), "research_queries": queries,
+                    "discovery_lead_counts": {
+                        role: sum(lead.source_role == role for lead in leads.values())
+                        for role in ("coverage", "official_lead", "research_lead", "discussion")
+                    },
                     "source_manifest": [{"source_id": s.source_id, "published_at": s.published_at,
                                          "captured_at": s.captured_at, "source_kind": s.source_kind,
+                                         "captured_after_case_as_of": s.captured_at > assignment.as_of,
                                          "origin_key": s.origin_key,
                                          "excerpt_sha256": hashlib.sha256(
                                              s.excerpt.encode("utf-8")).hexdigest()}
                                         for s in sources.values()],
                     "trace": trace, "publication_enabled": False,
+                    "source_coverage_audit": (self.provider.coverage_audit()
+                                              if callable(getattr(self.provider, "coverage_audit", None))
+                                              else None),
                     "semantic_accuracy_certified": False}
 
         def search(batch: tuple[str, ...], stage: str) -> None:
             for query in batch:
                 if len(queries) >= 8:
                     raise ValueError("Research call ceiling exceeded")
-                rows = self.provider.search(query, as_of=assignment.as_of, limit=4)
+                retrieved = self.provider.search(query, as_of=assignment.as_of, limit=4)
+                if isinstance(retrieved, ResearchBatch):
+                    rows = retrieved.captures
+                    if len(retrieved.leads) > 24 or len(leads) > 80:
+                        raise ValueError("Unbounded discovery-only lead packet")
+                    for lead in retrieved.leads:
+                        if not isinstance(lead, ResearchLead) or lead.published_at > assignment.as_of:
+                            raise ValueError("Undated discovery-only lead")
+                        leads[lead.url] = lead
+                    if len(leads) > 80:
+                        raise ValueError("Discovery-only lead budget exhausted")
+                else:
+                    rows = retrieved
                 if not isinstance(rows, (tuple, list)) or len(rows) > 4:
                     raise ValueError("Research provider returned unbounded results")
                 queries.append(query)
                 for row in rows:
-                    if not isinstance(row, ResearchCapture) or row.captured_at > assignment.as_of:
+                    if (not isinstance(row, ResearchCapture) or row.published_at > assignment.as_of or
+                            row.captured_at > assignment.as_of + (MAX_LIVE_CAPTURE_DELAY
+                                if assignment.research_mode == "live_shadow" else 0)):
                         raise ValueError("Undated or future research source")
                     if row.source_id in sources and sources[row.source_id] != row:
                         raise ValueError("Source ID changed meaning across research rounds")
@@ -382,7 +443,10 @@ class InvestigatorV3:
                         raise ValueError("Source capture budget exhausted")
                     sources[row.source_id] = row
                 trace.append({"stage": stage, "query_count": 1,
-                              "captures_seen": len(rows), "known_source_count": len(sources)})
+                              "captures_seen": len(rows), "known_source_count": len(sources),
+                              "discovery_leads_seen": len(retrieved.leads) if isinstance(retrieved, ResearchBatch) else 0,
+                              "sources_attempted": list(retrieved.sources_attempted) if isinstance(retrieved, ResearchBatch) else [],
+                              "source_errors": list(retrieved.source_errors) if isinstance(retrieved, ResearchBatch) else []})
 
         if assignment.topic_lead_disposition != "go" or assignment.topic_lead_score < 65:
             return finish("hold", "topic_lead_assignment_not_authorized")
@@ -393,6 +457,7 @@ class InvestigatorV3:
             initial = _bounded_queries(planning["queries"], 3)
             search(initial, "initial_research")
             evidence = {**asdict(assignment), "sources": [asdict(s) for s in sources.values()],
+                        "unverified_discovery_leads": [asdict(lead) for lead in leads.values()],
                         "research_plan": planning, "research_queries": queries,
                         "rubric_contract": rubric_contract("preliminary")}
             prelim_raw = self.model.complete("investigator_preliminary_v3", evidence)
@@ -426,6 +491,7 @@ class InvestigatorV3:
             if set(sources) == before_deep:
                 return finish("hold", "deep_research_no_new_evidence", prelim)
             report_input = {**evidence, "sources": [asdict(s) for s in sources.values()],
+                            "unverified_discovery_leads": [asdict(lead) for lead in leads.values()],
                             "deep_research_queries": deep,
                             "rubric_contract": rubric_contract("completed")}
             result = self.model.complete("investigator_dossier_v3", report_input)

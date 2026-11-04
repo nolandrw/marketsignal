@@ -141,6 +141,7 @@ class StoryState:
     quantitative_score: int | None = None
     topic_score: int | None = None
     topic_decision: str | None = None
+    evidence_verified: bool = False  # provisional dossier Verifier; NOT human fact-check
     semantic_review_passed: bool = False
     risk: str = "unknown"
     owner_approved: bool = False
@@ -165,6 +166,48 @@ class WorkflowController:
     """Reconciles requested stage transitions with deterministic policy."""
 
     @staticmethod
+    def advance_investigator_v3(story: StoryState, investigation: dict,
+                                contract: object) -> StoryState:
+        """Only a valid deterministic contract can enter semantic verification."""
+        from .handoff_contract import HandoffContractResult
+
+        if (story.state != "investigating" or
+                investigation.get("case_id") != story.story_id or
+                not isinstance(contract, HandoffContractResult) or
+                contract.case_id != story.story_id or
+                investigation.get("publication_enabled") is not False):
+            raise ValueError("Unrelated or out-of-order investigator handoff")
+        disposition = investigation.get("disposition")
+        if disposition == "spike":
+            return WorkflowController.advance(story, "spiked", reason="investigator_v3_spiked")
+        if disposition != "ready_for_verifier":
+            return WorkflowController.advance(story, "held", reason="investigator_v3_unready")
+        if (contract.status != "to_verifier" or contract.issues or
+                contract.claims_checked < 3 or
+                contract.publication_enabled or contract.authenticated_human_factcheck or
+                contract.check_kind != "deterministic_contract_only"):
+            return WorkflowController.advance(story, "held", reason="handoff_contract_blocked")
+        return WorkflowController.advance(story, "verifying", reason="investigator_v3_contract_valid")
+
+    @staticmethod
+    def record_evidence_verification(story: StoryState, review: object) -> StoryState:
+        """Require a separate substantive review before editorial commissioning."""
+        from .evidence_verifier import EvidenceReviewResult
+
+        if (story.state != "verifying" or not isinstance(review, EvidenceReviewResult) or
+                review.case_id != story.story_id or review.publication_enabled or
+                review.authenticated_human_factcheck):
+            raise ValueError("Invalid independent verifier result")
+        if (review.status == "provisionally_verified" and not review.issues and
+                review.review_kind == "independent_provisional_model_not_human_attested" and
+                review.claims_reviewed >= 3):
+            story.evidence_verified = True
+            return story
+        if review.status == "return_to_investigator" and review.issues:
+            return WorkflowController.advance(story, "investigating", reason="verifier_research_required")
+        return WorkflowController.advance(story, "held", reason="verifier_not_available_or_incomplete")
+
+    @staticmethod
     def advance(story: StoryState, target: str, *, reason: str,
                 owner_authorized: bool = False) -> StoryState:
         if story.state not in STATES or target not in TRANSITIONS.get(story.state, set()):
@@ -179,10 +222,10 @@ class WorkflowController:
         if story.state == "held" and target == "investigating" and story.topic_decision != "go":
             raise ValueError("Held topic must be re-evaluated before investigation")
         if story.state == "verifying" and target == "chief_editor" and not (
-            story.dossier_audited and story.independent_origins >= 2 and
+            story.evidence_verified and story.dossier_audited and story.independent_origins >= 2 and
             story.independently_sourced_claims >= 4
         ):
-            raise ValueError("No audited, independently sourced reporting dossier")
+            raise ValueError("No independently verified and audited reporting dossier")
         if story.state == "chief_editor" and target == "drafting" and not story.editorial_assignment_ready:
             raise ValueError("Writer requires an explicit chief-editor assignment")
         if story.state == "editorial_review" and target == "copy_editing" and not story.editorial_review_passed:
@@ -213,6 +256,8 @@ class WorkflowController:
                 story.problems.append("release_revision_budget_exhausted")
                 return story
             story.semantic_review_passed = False
+        if target in {"investigating", "verifying"}:
+            story.evidence_verified = False
         if target == "pending_owner_approval" and (not story.semantic_review_passed or
                                                    story.risk != "low" or
                                                    not story.dossier_audited or
@@ -325,6 +370,26 @@ class StoryLedger:
         return tuple({"created_at": r[0], "state": r[1], "agent": r[2],
                       "reason_code": r[3], "metadata": json.loads(r[4]),
                       "previous_hash": r[5], "event_hash": r[6]} for r in rows)
+
+    def diagnostic_events(self, *, limit: int = 2000) -> tuple:
+        """Bounded, source-text-free cross-case events for ProcessOverseer."""
+        from .oversight import ProcessFailureEvent
+
+        if not 1 <= limit <= 10000:
+            raise ValueError("Invalid diagnostic window")
+        rows = self.db.execute("""SELECT story_id,created_at,agent,reason_code,metadata
+                                  FROM story_events ORDER BY event_id DESC LIMIT ?""",
+                               (limit,)).fetchall()
+        return tuple(ProcessFailureEvent(
+            case_id=story_id, occurred_at=timestamp, stage=stage, reason_code=code,
+            prompt_version=meta.get("prompt_version", "unrecorded"),
+            input_artifact_id=meta.get("input_artifact_id", "unrecorded"),
+            output_artifact_id=meta.get("output_artifact_id", "unrecorded"),
+            investigator_self_score=meta.get("investigator_self_score"),
+            source_count=meta.get("source_count"),
+            finding_count=meta.get("finding_count"),
+        ) for story_id, timestamp, stage, code, raw in reversed(rows)
+          for meta in (json.loads(raw),))
 
     def verify_chain(self, story_id: str) -> bool:
         previous = "GENESIS"

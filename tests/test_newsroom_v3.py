@@ -9,6 +9,8 @@ from marketsignal.copy_preflight import (
     CopyImage, CopyLink, article_digest, check_copy_artifact, prepare_copy_artifact,
 )
 from marketsignal.feature_demo import fictional_feature_fixture
+from marketsignal.handoff_contract import ContractIssue, HandoffContractResult
+from marketsignal.evidence_verifier import EvidenceReviewResult
 from marketsignal.newsroom_control import (
     ClaimReview, ResearchTicket, StoryLedger, StoryState, TopicRubric,
     WorkflowController, accept_structural_dossier, story_id,
@@ -34,6 +36,11 @@ class NewsroomControlTests(unittest.TestCase):
         self.assertEqual(demo["audience_panel"]["issues"], [])
         self.assertEqual(demo["copy_preflight"]["status"], "passed")
         self.assertFalse(demo["copy_preflight"]["images_licensed"])
+        self.assertEqual(demo["investigator_v3"]["disposition"], "ready_for_verifier")
+        self.assertEqual(demo["handoff_contract"]["status"], "to_verifier")
+        self.assertEqual(demo["evidence_verifier"]["status"], "provisionally_verified")
+        self.assertFalse(demo["evidence_verifier"]["independent_human_review"])
+        self.assertFalse(demo["process_overseer"]["semantic_truth_certified"])
 
     def test_illegal_transition_and_direct_release_fail_closed(self):
         story = new_story()
@@ -42,6 +49,34 @@ class NewsroomControlTests(unittest.TestCase):
         WorkflowController.advance(story, "triaged", reason="valid movement")
         with self.assertRaises(ValueError):
             WorkflowController.advance(story, "drafting", reason="skip research")
+
+    def test_investigator_v3_requires_contract_for_verifier_handoff(self):
+        story = new_story()
+        story.topic_score, story.topic_decision = 80, "go"
+        for target in ("triaged", "topic_review", "investigating"):
+            WorkflowController.advance(story, target, reason="test")
+        report = {"case_id": story.story_id, "disposition": "ready_for_verifier",
+                  "publication_enabled": False}
+        review = HandoffContractResult(story.story_id, "return_to_investigator",
+                                       (ContractIssue("", "invalid_source", "", "Check source"),), 0)
+        WorkflowController.advance_investigator_v3(story, report, review)
+        self.assertEqual(story.state, "held")
+        second = new_story()
+        second.topic_score, second.topic_decision = 80, "go"
+        for target in ("triaged", "topic_review", "investigating"):
+            WorkflowController.advance(second, target, reason="test")
+        with self.assertRaises(ValueError):
+            WorkflowController.advance_investigator_v3(
+                second, {"case_id": "another_case", "disposition": "ready_for_verifier",
+                         "publication_enabled": False}, review)
+        approved = HandoffContractResult(second.story_id, "to_verifier", (), 4)
+        WorkflowController.advance_investigator_v3(second,
+                                                  {"case_id": second.story_id,
+                                                   "disposition": "ready_for_verifier",
+                                                   "publication_enabled": False},
+                                                  approved)
+        self.assertEqual(second.state, "verifying")
+        self.assertFalse(second.evidence_verified)
 
     def test_research_budget_blocks_runaway_loops(self):
         story = new_story()
@@ -64,6 +99,27 @@ class NewsroomControlTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             WorkflowController.advance(story, "chief_editor", reason="unsupported")
 
+    def test_verifier_return_is_bounded_and_missing_verifier_holds(self):
+        story = new_story()
+        story.topic_score, story.topic_decision = 80, "go"
+        for target in ("triaged", "topic_review", "investigating", "verifying"):
+            WorkflowController.advance(story, target, reason="test")
+        missing = EvidenceReviewResult(story.story_id, "awaiting_independent_verifier",
+                                       (ContractIssue("", "no_model", "", "Check source"),), 0)
+        WorkflowController.record_evidence_verification(story, missing)
+        self.assertEqual(story.state, "held")
+        self.assertFalse(story.evidence_verified)
+        story2 = new_story()
+        story2.topic_score, story2.topic_decision = 80, "go"
+        for target in ("triaged", "topic_review", "investigating", "verifying"):
+            WorkflowController.advance(story2, target, reason="test")
+        returned = EvidenceReviewResult(story2.story_id, "return_to_investigator",
+                                        (ContractIssue("claim", "claim_contradicted", "s1",
+                                                       "Research contradiction"),), 3)
+        WorkflowController.record_evidence_verification(story2, returned)
+        self.assertEqual(story2.state, "investigating")
+        self.assertEqual(story2.research_revisions, 1)
+
     def test_synthetic_fixture_can_pass_structural_dossier_only(self):
         candidate, dossier = fictional_feature_fixture()
         story = new_story()
@@ -72,6 +128,10 @@ class NewsroomControlTests(unittest.TestCase):
             WorkflowController.advance(story, target, reason="fictional")
         issues = accept_structural_dossier(story, candidate, dossier)
         self.assertEqual(issues, ())
+        with self.assertRaises(ValueError):
+            WorkflowController.advance(story, "chief_editor", reason="structural_pass_only")
+        WorkflowController.record_evidence_verification(
+            story, EvidenceReviewResult(story.story_id, "provisionally_verified", (), 4))
         WorkflowController.advance(story, "chief_editor", reason="fixture passed")
         self.assertFalse(story.semantic_review_passed)
         with self.assertRaises(ValueError):
