@@ -39,6 +39,7 @@ class NewsroomControlTests(unittest.TestCase):
 
     def test_research_budget_blocks_runaway_loops(self):
         story = new_story()
+        story.topic_score, story.topic_decision = 80, "go"
         for target in ("triaged", "topic_review", "investigating"):
             WorkflowController.advance(story, target, reason="test")
         for _ in range(2):
@@ -51,6 +52,7 @@ class NewsroomControlTests(unittest.TestCase):
 
     def test_verifier_cannot_promote_without_evidence(self):
         story = new_story()
+        story.topic_score, story.topic_decision = 80, "go"
         for target in ("triaged", "topic_review", "investigating", "verifying"):
             WorkflowController.advance(story, target, reason="test")
         with self.assertRaises(ValueError):
@@ -59,6 +61,7 @@ class NewsroomControlTests(unittest.TestCase):
     def test_synthetic_fixture_can_pass_structural_dossier_only(self):
         candidate, dossier = fictional_feature_fixture()
         story = new_story()
+        story.topic_score, story.topic_decision = 80, "go"
         for target in ("triaged", "topic_review", "investigating", "verifying"):
             WorkflowController.advance(story, target, reason="fictional")
         issues = accept_structural_dossier(story, candidate, dossier)
@@ -83,6 +86,32 @@ class NewsroomControlTests(unittest.TestCase):
         self.assertEqual(rubric.score, 100)
         self.assertFalse(rubric.eligible)
         self.assertTrue(TopicRubric(5, 5, 5, 5, 5, 5, ("source-1",)).eligible)
+
+    def test_topic_review_requires_explicit_go_not_just_self_assessed_score(self):
+        story = new_story()
+        WorkflowController.advance(story, "triaged", reason="test")
+        WorkflowController.advance(story, "topic_review", reason="test")
+        story.topic_score = 99
+        with self.assertRaises(ValueError):
+            WorkflowController.advance(story, "investigating", reason="no topic decision")
+        story.topic_decision = "hold"
+        with self.assertRaises(ValueError):
+            WorkflowController.advance(story, "investigating", reason="hold cannot bypass")
+        story.topic_decision, story.topic_score = "go", 64
+        with self.assertRaises(ValueError):
+            WorkflowController.advance(story, "investigating", reason="below 65")
+        story.topic_score = 65
+        WorkflowController.advance(story, "investigating", reason="passed")
+
+    def test_held_topic_must_be_reassessed_to_reopen(self):
+        story = new_story()
+        for target in ("triaged", "topic_review", "held"):
+            WorkflowController.advance(story, target, reason="awaiting proof")
+        with self.assertRaises(ValueError):
+            WorkflowController.advance(story, "investigating", reason="no approval")
+        WorkflowController.advance(story, "topic_review", reason="new evidence")
+        story.topic_score, story.topic_decision = 75, "go"
+        WorkflowController.advance(story, "investigating", reason="reconsidered")
 
     def test_owner_approval_needs_full_review_even_after_editor(self):
         state = new_story()

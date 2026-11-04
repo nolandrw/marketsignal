@@ -35,7 +35,7 @@ TRANSITIONS = {
     "audience_review": {"release_review", "editorial_review", "spiked"},
     "release_review": {"verifying", "chief_editor", "pending_owner_approval", "held", "spiked"},
     "pending_owner_approval": {"approved_for_manual_release", "held", "spiked"},
-    "held": {"investigating", "spiked"},
+    "held": {"topic_review", "investigating", "spiked"},
     "spiked": set(), "approved_for_manual_release": set(),
 }
 MAX_RESEARCH_REVISIONS = 2
@@ -87,30 +87,31 @@ class ClaimReview:
 
 @dataclass(frozen=True)
 class TopicRubric:
-    consequence: int
-    new_development: int
-    narrative: int
-    public_relevance: int
-    novelty: int
+    news_peg: int
+    consequences: int
+    editorial_potential: int
+    originality: int
     research_feasibility: int
+    timeliness: int
     source_ids: tuple[str, ...] = ()
 
     def __post_init__(self):
-        for name in ("consequence", "new_development", "narrative", "public_relevance",
-                     "novelty", "research_feasibility"):
+        for name in ("news_peg", "consequences", "editorial_potential", "originality",
+                     "research_feasibility", "timeliness"):
             if not 0 <= getattr(self, name) <= 5:
                 raise ValueError("Topic rubric dimensions must be 0..5")
 
     @property
     def score(self) -> int:
-        return (self.consequence * 5 + self.new_development * 4 +
-                self.narrative * 3 + self.public_relevance * 3 +
-                self.novelty * 3 + self.research_feasibility * 2)
+        # Fixed, editorially chosen weights; these are not trained probabilities.
+        return (self.news_peg * 4 + self.consequences * 4 +
+                self.editorial_potential * 4 + self.originality * 3 +
+                self.research_feasibility * 3 + self.timeliness * 2)
 
     @property
     def eligible(self) -> bool:
-        # Even a 95/100 self-assessment cannot pass as a sourced topic pitch.
-        return bool(self.score >= 55 and self.new_development > 0 and self.source_ids)
+        # Preliminary only; TopicLeadAgent applies independent, mandatory gates.
+        return bool(self.score >= 65 and self.news_peg > 0 and self.source_ids)
 
 
 @dataclass(frozen=True)
@@ -139,6 +140,7 @@ class StoryState:
     release_returns: int = 0
     quantitative_score: int | None = None
     topic_score: int | None = None
+    topic_decision: str | None = None
     semantic_review_passed: bool = False
     risk: str = "unknown"
     owner_approved: bool = False
@@ -165,6 +167,13 @@ class WorkflowController:
             raise ValueError("Invalid newsroom state transition")
         if not reason or len(reason) > 250:
             raise ValueError("A bounded transition reason is required")
+        if story.state == "topic_review" and target == "investigating" and not (
+            story.topic_decision == "go" and story.topic_score is not None and
+            story.topic_score >= 65
+        ):
+            raise ValueError("Topic Lead GO decision and passing score required for investigation")
+        if story.state == "held" and target == "investigating" and story.topic_decision != "go":
+            raise ValueError("Held topic must be re-evaluated before investigation")
         if story.state == "verifying" and target == "chief_editor" and not (
             story.dossier_audited and story.independent_origins >= 2 and
             story.independently_sourced_claims >= 4

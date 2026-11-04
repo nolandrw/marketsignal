@@ -34,13 +34,17 @@ from .postgres import PostgresStorage, open_storage
 from .source_smoke import probe_sources
 from .storage import Storage
 from .quantitative import pitches_from_archive
+from .quantitative import MarketObservation, create_pitch
 from .historical import backfill_prices
 from .kalshi import KalshiDiscovery
 from .agent_sources import PolymarketComments
 from .learning import load_human_labels, train_challenger
 from .newsroom_control import (
-    StoryLedger, StoryState, TopicRubric, WorkflowController,
+    StoryLedger, StoryState, WorkflowController,
     accept_structural_dossier, story_id,
+)
+from .topic_lead import (
+    TopicLeadAgent, TopicLeadContext, TopicSourceLead, load_topic_context,
 )
 from .oversight import OversightAgent, SyntheticAudiencePanel, grade_agents
 
@@ -143,9 +147,70 @@ def newsroom_v3_demo() -> dict:
     story = StoryState(story_id(candidate.market.market_id, candidate.signal.observed_at),
                        candidate.market.market_id, candidate.signal.observed_at,
                        quantitative_score=candidate.signal.score)
-    rubric = TopicRubric(5, 4, 4, 4, 4, 3,
-                         source_ids=tuple(doc.source_id for doc in dossier.documents))
-    story.topic_score = rubric.score
+    # Scripted, explicitly fictional Topic Lead packet: this is a contract test,
+    # not a model researching or independently evaluating real-world evidence.
+    class FictionalTopicReplay:
+        def complete(self, stage: str, payload: dict) -> dict:
+            if stage != "topic_lead":
+                raise ValueError("Unexpected replay stage")
+            source_ids = [doc["source_id"] for doc in payload["sources"]]
+            return {
+                "requested_disposition": "go",
+                "scores": {"news_peg": 5, "consequences": 4,
+                           "editorial_potential": 4, "originality": 4,
+                           "research_feasibility": 4, "timeliness": 4},
+                "score_rationales": {
+                    "news_peg": "Dated fictional engineering notice postpones the vote",
+                    "consequences": "Fictional coastal residents and fishing businesses are affected",
+                    "editorial_potential": "Unanticipated engineering delay conflicts with winter timetable",
+                    "originality": "Fixture index reports no competing published angle",
+                    "research_feasibility": "Multiple captured fictional documents and distinct origins",
+                    "timeliness": "Vote delay has just been documented in the fictional case",
+                },
+                "news_peg_type": "documented_development",
+                "news_peg": "Fictional city postponed the flood barrier vote",
+                "news_peg_source_ids": ["notice-2026"],
+                "prior_expectation": "Final decision was expected ahead of winter storms",
+                "prior_expectation_source_ids": ["plan-2026"],
+                "public_stakes": "Residents and fishing businesses may face costs from delay",
+                "public_stakes_source_ids": ["impact-2026"],
+                "coverage_analysis": "No previously commissioned fictional article in the demo",
+                "angles": [{"angle_id": "review-delay",
+                            "working_headline": "A Coastal City's Flood Defense Plan Hits an Unexpected Pause",
+                            "central_question": "What caused the sudden engineering review, and who is exposed?",
+                            "thesis_to_test": "Foundation concerns threaten a promised timetable",
+                            "disconfirmation_test": "The review is routine and does not affect the approval timeline",
+                            "novel_contribution": "Document the newly exposed costs and engineering conflict",
+                            "source_ids": source_ids[:4]}],
+                "counterevidence": ["Independent engineering panel has not found the design unsafe"],
+                "research_questions": ["What precisely changed in the engineering assessment?",
+                                       "What temporary protections exist?"],
+                "uncertainties": ["The design's eventual viability is unknown"],
+                "sensitivity_flags": ["fictional_flood_safety"],
+                "revisit_condition": "A further engineering decision or source disclosure",
+            }
+
+    source_leads = tuple(TopicSourceLead(
+        source_id=doc.source_id, publisher=doc.publisher, url=doc.url,
+        origin_key=doc.independent_origin, published_at=doc.published_at,
+        source_type=doc.source_kind, captured_excerpt=doc.content[:1000],
+    ) for doc in dossier.documents)
+    context = TopicLeadContext(
+        story_id=story.story_id, as_of=candidate.signal.observed_at,
+        market_question=candidate.market.question,
+        resolution_terms="Fictional council approval required before year end",
+        quantitative_pitch=create_pitch(candidate.market, candidate.signal.observed_at,
+                                        (MarketObservation(candidate.signal.baseline_at,
+                                                           candidate.signal.previous_price,
+                                                           candidate.market.volume_24h,
+                                                           candidate.market.liquidity),)),
+        sources=source_leads, coverage_checked=True,
+    )
+    topic = TopicLeadAgent(FictionalTopicReplay()).assess(context)
+    story.topic_score = topic.score
+    story.topic_decision = topic.disposition
+    if topic.disposition != "go":
+        raise AssertionError("Fictional Topic Lead fixture no longer passes")
     with StoryLedger(":memory:") as ledger:
         def move(target: str, reason: str, agent: str) -> None:
             WorkflowController.advance(story, target, reason=reason)
@@ -183,7 +248,12 @@ def newsroom_v3_demo() -> dict:
         # real release cannot advance to owner approval on this evidence.
         move("held", "semantic_factcheck_not_available", "release_editor")
         result = {"synthetic": True, "state": story.to_dict(),
-                  "topic_score": rubric.score, "owner_approval_required": True,
+                  "topic_score": topic.score,
+                  "topic_lead": {"disposition": topic.disposition,
+                                 "reason_codes": topic.reason_codes,
+                                 "angles": len(topic.angles),
+                                 "scripted_replay": True},
+                  "owner_approval_required": True,
                   "publication_enabled": False, "audit_chain_valid": ledger.verify_chain(story.story_id),
                   "audit_handoffs": [entry["state"] for entry in ledger.events(story.story_id)],
                   "fictional_article": {"headline": draft.headline,
@@ -258,6 +328,10 @@ def main(argv: list[str] | None = None) -> int:
     comments.add_argument("--archive-file", required=True)
     comments.add_argument("--max-events", type=int, default=2)
     commands.add_parser("newsroom-v3-demo", help="Synthetic bounded workflow; no release")
+    topic = commands.add_parser("topic-lead", help="Opt-in model review of private Topic Lead packet; no release")
+    topic.add_argument("--context-file", required=True, help="Private source/excerpt packet")
+    topic.add_argument("--out", default="data/private/topic-lead-assessment.json")
+    topic.add_argument("--model", default="gpt-5-mini", help="Explicit paid model choice")
     field = commands.add_parser("field-trial", help="Audit a real-topic curated evidence case and render a held shadow article")
     field.add_argument("--case", required=True)
     field.add_argument("--out", default="reports/field-trial.md")
@@ -323,6 +397,28 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if arguments.command == "newsroom-v3-demo":
         print(json.dumps(newsroom_v3_demo(), indent=2))
+        return 0
+    if arguments.command == "topic-lead":
+        output = Path(arguments.out)
+        if (output.suffix != ".json" or "private" not in output.parts or
+                any(part in {"site", "archive", "docs", "tests", "examples"}
+                    for part in output.parts)):
+            parser.error("Topic Lead output must be a private JSON artifact")
+        try:
+            packet = load_topic_context(arguments.context_file)
+            model = ResponsesJSONModel(arguments.model)
+            result = TopicLeadAgent(model).assess(packet)
+        except (OSError, ValueError, KeyError, TypeError, ModelUnavailable) as exc:
+            print(json.dumps({"status": "research_hold", "reason": type(exc).__name__,
+                              "publication_enabled": False}))
+            return 1
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps({"schema_version": 1, "case_id": packet.story_id,
+                                      "assessment": result.to_dict()}, indent=2),
+                          encoding="utf-8")
+        print(json.dumps({"status": result.disposition, "topic_score": result.score,
+                          "reason_codes": result.reason_codes, "private_report": str(output),
+                          "publication_enabled": False}, indent=2))
         return 0
     if arguments.command == "field-trial":
         case = load_case(arguments.case)
