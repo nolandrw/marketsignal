@@ -44,6 +44,38 @@ class NewspaperFeatureTests(unittest.TestCase):
         self.assertTrue(any(p.role == "market_context" for p in article.paragraphs))
         self.assertTrue(250 <= article.approximate_word_count <= 600)
         self.assertEqual(article.status, "SHADOW_ONLY")
+        self.assertNotEqual(article.headline, self.dossier.proposed_headline)
+        self.assertEqual(article.headline, self.dossier.editorial_selection.headline)
+
+    def test_investigator_must_propose_multiple_supported_angles(self):
+        broken = replace(self.dossier, story_pitches=())
+        self.assertIn("missing_competing_story_pitches", self.editor.plan(self.candidate, broken).blockers)
+        self.assertEqual(self.editor.plan(self.candidate, broken).disposition, "research_hold")
+
+    def test_chief_editor_must_select_an_angle(self):
+        broken = replace(self.dossier, editorial_selection=None)
+        self.assertIn("no_editorially_selected_story", self.editor.plan(self.candidate, broken).blockers)
+
+    def test_selected_story_requires_a_verifiable_spine_and_counterevidence(self):
+        first = self.dossier.story_pitches[0]
+        broken_pitch = replace(first, supporting_claim_ids=("development",), contrary_claim_ids=())
+        broken = replace(self.dossier, story_pitches=(broken_pitch,) + self.dossier.story_pitches[1:])
+        issues = self.editor.plan(self.candidate, broken).blockers
+        self.assertIn("selected_pitch_missing_news_spine", issues)
+        self.assertIn("selected_pitch_missing_counterevidence", issues)
+
+    def test_an_epistemic_nonstory_headline_is_not_commissioned(self):
+        selection = replace(self.dossier.editorial_selection,
+                            headline="Early Voting Raises a Question Nobody Can Yet Answer")
+        broken = replace(self.dossier, editorial_selection=selection)
+        self.assertIn("epistemic_nonstory_headline", self.editor.plan(self.candidate, broken).blockers)
+
+    def test_rewritten_headline_must_return_to_editorial_gate(self):
+        plan = self.editor.plan(self.candidate, self.dossier)
+        draft = GroundedNewspaperWriter().write(self.candidate, self.dossier, plan)
+        revised = replace(draft, headline="A Reporter Invents a Different Framing of the Harbor")
+        self.assertIn("headline_changed_without_evidence_review",
+                      self.verifier.check(self.candidate, self.dossier, plan, revised))
 
     def test_quote_must_exist_in_captured_source(self):
         broken = replace(self.dossier.quotes[0], text="I said something completely different")

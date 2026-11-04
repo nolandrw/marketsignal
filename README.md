@@ -115,12 +115,14 @@ suppression window per market.
   independently human-labeled historical editorial outcomes; time-ordered
   holdout and explicit nonactivation are required. No training labels exist yet.
 - A private evidence-linked **real-topic field trial** on Texas's November 2026
-  Senate race: eight short, attributed source extracts, an original newspaper
-  style shadow draft, exact claim/source references, unresolved research
-  questions and ten automatic structural checks. The trial **does not**
-  invent market movement or certify semantic truth; its real article body is
-  held outside public Git and never included in the public site. A separate
-  fictional fixture runs in CI. See [field trial](docs/field-trial.md).
+  Senate race: a re-commissioned newspaper-style shadow draft, competing
+  investigative story theses, a source-linked chief-editor angle selection,
+  unresolved reporting questions and eleven structural checks. Its first
+  turnout-uncertainty angle was spiked for inadequate narrative payoff.
+  The trial **does not** invent market movement, establish original reporting,
+  or certify semantic truth; the real article body is held outside public Git
+  and never included in the public site. A fictional fixture runs in CI. See
+  [field trial](docs/field-trial.md) and [story thesis gate](docs/story-thesis-v1.md).
 - Bounded historical-context discovery across prior, recent and broader
   reporting windows (GDELT metadata only), triggered in daily shadow runs
   and recorded as sanitized counts, with no claim that a news hit is verified.
