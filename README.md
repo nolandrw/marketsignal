@@ -55,9 +55,10 @@ python -m marketsignal evaluate-agents --cases 120
 python -m marketsignal source-smoke --archive-dir data/archive
 python -m marketsignal investigate-archive --archive-file data/archive/2026-11-03.json
 python -m marketsignal newsroom-v3-demo
+python -m marketsignal model-budget-estimate --cases 4
 # Explicit opt-in live public research + provisional dossier Verifier (requires curated private context,
-# matching source captures, host rights policy and OPENAI_API_KEY):
-# python -m marketsignal research-v3-shadow --context-file data/private/topic-context.json --captures-file data/private/captured-context.json --policy-file data/private/research-policy.json --angle-id approved-angle-id
+# matching source captures, host rights policy, OPENAI_API_KEY, and a shared spending ceiling):
+# python -m marketsignal research-v3-shadow --context-file data/private/topic-context.json --captures-file data/private/captured-context.json --policy-file data/private/research-policy.json --angle-id approved-angle-id --max-model-spend-usd 2.00
 python -m marketsignal field-trial --case data/private/your_research_case.json --out reports/field-trial.md
 python -m marketsignal shadow-loop --mode replay --case tests/fixtures/fictional_field_trial.json --out reports/editorial-loop.md --trace reports/editorial-loop.json
 python -m marketsignal capture-context --archive-file data/archive/YYYY-MM-DD.json --policy-file examples/source-capture-policy.example.json --out data/private/captured-context.json

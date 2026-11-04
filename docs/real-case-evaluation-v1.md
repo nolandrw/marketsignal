@@ -74,8 +74,36 @@ python -m marketsignal research-v3-shadow \
   --policy-file data/private/research-policy.json \
   --angle-id selected-angle-id \
   --test-fixture-file data/private/case-test-fixture.json \
+  --max-model-spend-usd 2.00 \
+  --model-budget-db data/private/model-budget.sqlite \
   --out data/private/case-shadow-result.json
 ```
+
+The `$2.00` ceiling above is an **example, not an approved expenditure**.
+An explicit approved ceiling and an API key are required before any live run.
+Use the **same ledger file and ceiling for all four cases**; the limit is
+persistent across separate CLI invocations and is not reset for each case.
+`--max-model-spend-usd` is mandatory. Reservations are debited *before* network
+calls based on a conservative estimate of the bounded request and output; only
+a complete provider usage record can reduce a reservation. Failed calls and
+missing usage retain their full reserved charge. Exhaustion stops before HTTP.
+The private SQLite ledger is not a general provider billing cap, so apply an
+independent OpenAI project-level limit before live use. This opt-in safeguard
+currently applies to `research-v3-shadow`, not every legacy model CLI.
+
+The no-key, no-cost estimate command is:
+
+```bash
+python -m marketsignal model-budget-estimate --cases 4
+```
+
+The illustrative five calls per case × 10,000 input and 2,400 output tokens
+per call produce **$0.146** of model charges at the `gpt-5-mini` rate card
+checked November 4, 2026 ($0.25 per million input; $2.00 per million output;
+$0.025 per million cached input tokens). Actual call counts, outputs, retries,
+and provider fees may differ; the shared preflight ledger intentionally
+reserves more than the point estimate. The price card must be rechecked
+before execution.
 
 The fixture JSON must contain exactly `case_id`, `market_id`, `as_of`,
 `purpose`, `mode: "test_only_manual_subject"`, and
