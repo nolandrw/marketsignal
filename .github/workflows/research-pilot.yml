@@ -32,6 +32,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install original-document extraction dependencies
+        run: python -m pip install -e '.[research]'
       - name: Require all three secrets before any paid call
         run: |
           test -n "$OPENAI_API_KEY"

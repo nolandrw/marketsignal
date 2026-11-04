@@ -112,6 +112,10 @@ class ResearchCapture:
     captured_at: int
     source_kind: str
     excerpt: str
+    document_sha256: str = ""
+    content_location: str = ""
+    mime_type: str = ""
+    publication_date_basis: str = ""
 
     def __post_init__(self):
         try:
@@ -125,7 +129,10 @@ class ResearchCapture:
                 not self.publisher.strip() or not self.origin_key.strip() or
                 self.source_kind not in ALLOWED_SOURCE_KINDS or
                 not 0 < self.published_at <= self.captured_at or
-                not 30 <= len(self.excerpt) <= 2500):
+                not 30 <= len(self.excerpt) <= 2500 or
+                (self.document_sha256 and not re.fullmatch(r"[0-9a-f]{64}", self.document_sha256)) or
+                len(self.content_location) > 500 or len(self.mime_type) > 80 or
+                len(self.publication_date_basis) > 90):
             raise ValueError("Invalid dated investigative source capture")
 
 

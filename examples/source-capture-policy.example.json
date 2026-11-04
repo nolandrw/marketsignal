@@ -22,6 +22,7 @@
   {
     "host": "www.sec.gov",
     "kind": "official_record",
-    "copyright_basis": "official_public_record"
+    "copyright_basis": "official_public_record",
+    "max_capture_bytes": 16000000
   }
 ]

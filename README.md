@@ -152,7 +152,9 @@ suppression window per market.
   [executable agentic loop](docs/agentic-shadow-loop.md).
 - A new, read-only **source-capture gateway** that takes historical/recent
   GDELT discovery leads through explicitly approved publishers, `robots.txt`,
-  publisher-date checks, bounded HTML extraction and short source fingerprints.
+  first-party publication-date checks, bounded HTML/PDF/structured-feed/plain-
+  text extraction, original-document hashes and located short excerpts.
+  Optional PDF extraction requires `pip install -e '.[research]'`.
   An opt-in claim-extraction stage turns diverse captured excerpts into a
   provisional research case, then hands it to the existing newspaper workflow.
   It cannot assume permission to scrape news outlets, cannot invent missing

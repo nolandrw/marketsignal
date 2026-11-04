@@ -1,4 +1,4 @@
-"""Conservative HTML source capture from an explicit publisher allowlist.
+"""Conservative multi-format source capture from an explicit publisher allowlist.
 
 GDELT and social results are *leads*. This gateway separately retrieves a
 bounded public page after checking the site's robots policy. It persists only
@@ -22,6 +22,8 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from urllib.robotparser import RobotFileParser
 
 from .context_discovery import ContextDiscoveryPacket, ContextLead
+from .document_ingestion import (MAX_DOCUMENT_BYTES, SUPPORTED_MIME,
+                                 ExtractionHold, extract_document, parse_date)
 
 
 USER_AGENT = "MarketSignalResearchBot"
@@ -43,6 +45,7 @@ class HostPermission:
     host: str
     kind: str  # official_record | original_research | independent_reporting
     copyright_basis: str  # official_public_record | permissioned_short_excerpt
+    max_capture_bytes: int = 2_000_000
 
     def __post_init__(self):
         if (not re.fullmatch(r"[a-z0-9.-]{5,120}", self.host) or
@@ -50,18 +53,27 @@ class HostPermission:
                 self.host in ("localhost", "metadata.google.internal") or
                 self.host.endswith((".localhost", ".local", ".internal", ".invalid", ".test")) or
                 self.kind not in {"official_record", "original_research", "independent_reporting"} or
-                self.copyright_basis not in {"official_public_record", "permissioned_short_excerpt"}):
+                self.copyright_basis not in {"official_public_record", "permissioned_short_excerpt"} or
+                type(self.max_capture_bytes) is not int or not 64_000 <= self.max_capture_bytes <= MAX_DOCUMENT_BYTES):
             raise ValueError("Invalid publisher permission")
         if self.kind == "independent_reporting" and self.copyright_basis != "permissioned_short_excerpt":
             raise ValueError("Reporting requires explicit short-excerpt permission")
+        if self.kind == "independent_reporting" and self.max_capture_bytes > 2_000_000:
+            raise ValueError("Independent reporting capture cannot use large-document allowance")
 
 
 class HTTPContent(Protocol):
     def get(self, url: str, *, max_bytes: int, media: str) -> str: ...
 
 
+@dataclass(frozen=True)
+class FetchedDocument:
+    content: bytes
+    mime_type: str
+
+
 class PublicHTMLTransport:
-    """No redirects; no auth/cookies; bounded response; no arbitrary ports."""
+    """No redirects/auth/cookies; bounded MIME-aware source fetch."""
 
     def __init__(self, timeout: float = 8):
         if not 1 <= timeout <= 20:
@@ -69,32 +81,58 @@ class PublicHTMLTransport:
         self.timeout = timeout
         self._opener = build_opener(_NoRedirect)
 
-    def get(self, url: str, *, max_bytes: int, media: str) -> str:
-        if media not in ("text/html", "text/plain") or not 1 <= max_bytes <= MAX_HTML_BYTES:
-            raise CaptureError("Invalid content request")
+    def _read(self, url: str, *, max_bytes: int, accept: str) -> FetchedDocument:
         try:
             request = Request(url, headers={
                 "User-Agent": USER_AGENT + "/0.1 (+research; private short excerpts)",
-                "Accept": media,
+                "Accept": accept,
             })
             with self._opener.open(request, timeout=self.timeout) as response:
                 ctype = response.headers.get("Content-Type", "").split(";", 1)[0].lower().strip()
                 declared = int(response.headers.get("Content-Length", "0"))
-                if ctype != media or declared < 0 or declared > max_bytes:
+                pdf_download = (ctype == "application/octet-stream" and
+                                urlsplit(url).path.lower().endswith(".pdf") and
+                                accept != "text/plain")
+                if (ctype not in SUPPORTED_MIME and not pdf_download or
+                        declared < 0 or declared > max_bytes):
                     raise CaptureError("Publisher returned unsupported content or size")
                 raw = response.read(max_bytes + 1)
                 if len(raw) > max_bytes:
                     raise CaptureError("Publisher content exceeded budget")
-            return raw.decode("utf-8")
-        except (HTTPError, URLError, TimeoutError, UnicodeError, ValueError, OSError) as exc:
+            if pdf_download and raw.startswith(b"%PDF-"):
+                ctype = "application/pdf"
+            if ctype not in SUPPORTED_MIME:
+                raise CaptureError("Publisher returned unsupported content type")
+            return FetchedDocument(raw, ctype)
+        except (HTTPError, URLError, TimeoutError, ValueError, OSError) as exc:
             raise CaptureError("Publisher retrieval failed: " + type(exc).__name__) from None
+
+    def get(self, url: str, *, max_bytes: int, media: str) -> str:
+        """Legacy exact-MIME text path (including robots.txt)."""
+        if media not in ("text/html", "text/plain") or not 1 <= max_bytes <= MAX_HTML_BYTES:
+            raise CaptureError("Invalid content request")
+        document = self._read(url, max_bytes=max_bytes, accept=media)
+        if document.mime_type != media:
+            raise CaptureError("Publisher returned unsupported content type")
+        try:
+            return document.content.decode("utf-8")
+        except UnicodeError:
+            raise CaptureError("Publisher returned unsupported text encoding") from None
+
+    def fetch_document(self, url: str, *, max_bytes: int) -> FetchedDocument:
+        if not 1 <= max_bytes <= MAX_DOCUMENT_BYTES:
+            raise CaptureError("Invalid document size budget")
+        return self._read(url, max_bytes=max_bytes,
+                          accept="text/html,application/pdf,application/json,text/csv,application/xml,"
+                                 "application/rss+xml,application/atom+xml,text/plain")
 
 
 class _ArticleParser(HTMLParser):
-    """Conservatively keep paragraphs inside main/article, never scripts/nav."""
+    """Extract bounded blocks; broad fallback is for approved official records."""
 
-    def __init__(self):
+    def __init__(self, *, require_article: bool = True):
         super().__init__(convert_charrefs=True)
+        self.require_article = require_article
         self._container = 0
         self._skip = 0
         self._paragraph = 0
@@ -104,8 +142,10 @@ class _ArticleParser(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs):
         attributes = dict(attrs)
-        if tag == "meta" and attributes.get("property", "").lower() in (
-                "article:published_time", "datepublished"):
+        if tag == "meta" and (attributes.get("property", "") or
+                               attributes.get("name", "")).lower() in (
+                "article:published_time", "datepublished", "date",
+                "citation_publication_date", "dc.date.issued", "pubdate"):
             self.publisher_date = attributes.get("content", "")[:80]
         if tag == "time" and attributes.get("datetime") and not self.publisher_date:
             self.publisher_date = attributes["datetime"][:80]
@@ -113,13 +153,14 @@ class _ArticleParser(HTMLParser):
             self._skip += 1
         if tag in ("main", "article"):
             self._container += 1
-        if tag in ("p", "blockquote", "h1", "h2") and self._container and not self._skip:
+        if tag in (("p", "blockquote", "h1", "h2") if self.require_article else
+                   ("p", "blockquote", "h1", "h2", "h3", "li", "td", "th")) and (self._container or not self.require_article) and not self._skip:
             self._paragraph += 1
             if self._paragraph == 1:
                 self._current = []
 
     def handle_endtag(self, tag: str):
-        if tag in ("p", "blockquote", "h1", "h2") and self._paragraph:
+        if tag in ("p", "blockquote", "h1", "h2", "h3", "li", "td", "th") and self._paragraph:
             self._paragraph -= 1
             if self._paragraph == 0 and self._current:
                 text = re.sub(r"\s+", " ", "".join(self._current)).strip()
@@ -132,7 +173,7 @@ class _ArticleParser(HTMLParser):
             self._skip = max(0, self._skip - 1)
 
     def handle_data(self, data: str):
-        if self._container and self._paragraph and not self._skip:
+        if (self._container or not self.require_article) and self._paragraph and not self._skip:
             self._current.append(data)
 
 
@@ -173,6 +214,10 @@ class ArticleCapture:
     robots_decision: str = "allowed"
     verified_truth: bool = False
     permission_to_republish: bool = False
+    mime_type: str = "text/html"
+    excerpt_locations: tuple[str, ...] = ()
+    extraction_method: str = "html_paragraphs"
+    partial_extraction: bool = False
 
     def source_rows(self) -> list[dict]:
         rows = []
@@ -191,6 +236,11 @@ class ArticleCapture:
                 "document_sha256": self.document_sha256,
                 "copyright_basis": self.copyright_basis,
                 "robots_decision": self.robots_decision,
+                "mime_type": self.mime_type,
+                "content_location": (self.excerpt_locations[index - 1]
+                                     if index <= len(self.excerpt_locations) else "unknown"),
+                "extraction_method": self.extraction_method,
+                "partial_extraction": self.partial_extraction,
             })
         return rows
 
@@ -228,40 +278,65 @@ class SourceCaptureGateway:
         if not 0 < lead.published_at <= observed_at or lead.factual_status != "discovery_only":
             raise CaptureError("Lead date/status is not eligible for capture")
         self._permission(host, lead.url)
-        raw = self.transport.get(lead.url, max_bytes=MAX_HTML_BYTES, media="text/html")
-        parser = _ArticleParser()
-        parser.feed(raw)
-        if not parser.publisher_date:
-            raise CaptureError("Publisher publication timestamp unavailable")
+        if hasattr(self.transport, "fetch_document"):
+            document = self.transport.fetch_document(
+                lead.url, max_bytes=self.permissions[host].max_capture_bytes)
+        else:
+            legacy = self.transport.get(lead.url, max_bytes=MAX_HTML_BYTES, media="text/html")
+            document = FetchedDocument(legacy.encode("utf-8"), "text/html")
+        trusted_feed_date = (lead.published_at if
+                             getattr(lead, "publication_date_basis", "") == "first_party_official_feed" and
+                             self.permissions[host].kind == "official_record" and
+                             lead.publisher.lower() == host else None)
+        mime = document.mime_type
         try:
-            published = datetime.fromisoformat(parser.publisher_date.replace("Z", "+00:00"))
-            if published.tzinfo is None or not 0 < published.timestamp() <= observed_at:
-                raise ValueError("Unusable publisher date")
-            published_at = int(published.timestamp())
-        except (ValueError, OverflowError):
-            raise CaptureError("Publisher publication timestamp invalid or future") from None
-        # The extractor is deliberately conservative. Script-rendered pages,
-        # naked body text, and inaccessible articles remain research holds.
-        paragraphs = [html.unescape(p) for p in parser.paragraphs]
-        if sum(len(p) for p in paragraphs) < 220:
-            raise CaptureError("Insufficient publisher-provided article text")
-        selected = []
-        for paragraph in paragraphs:
-            if len(selected) >= 3:
-                break
-            # Preserve full short paragraphs and do not fabricate ellipses.
-            if 45 <= len(paragraph) <= 370:
-                selected.append(paragraph)
-        if len(selected) < 2:
-            raise CaptureError("No two intact article excerpts within the limit")
+            if mime in {"text/html", "application/xhtml+xml"}:
+                raw = document.content.decode("utf-8")
+                parser = _ArticleParser()
+                parser.feed(raw)
+                published_at = parse_date(parser.publisher_date)
+                basis = "publisher_page_metadata" if published_at is not None else None
+                if published_at is None and trusted_feed_date is not None:
+                    published_at, basis = trusted_feed_date, "first_party_official_feed"
+                paragraphs = [html.unescape(p) for p in parser.paragraphs]
+                selected_with_locations = [(f"html:paragraph:{i}", p[:370])
+                                           for i, p in enumerate(paragraphs, 1) if len(p) >= 45][:3]
+                if (self.permissions[host].kind == "official_record" and
+                        (sum(map(len, paragraphs)) < 220 or len(selected_with_locations) < 2)):
+                    broad = _ArticleParser(require_article=False)
+                    broad.feed(raw)
+                    paragraphs = [html.unescape(p) for p in broad.paragraphs]
+                    selected_with_locations = [(f"html:paragraph:{i}", p[:370])
+                                               for i, p in enumerate(paragraphs, 1) if len(p) >= 45][:3]
+                    method = "html_official_record_blocks"
+                else:
+                    method = "html_paragraphs"
+                if sum(map(len, paragraphs)) < 220 or len(selected_with_locations) < 2:
+                    raise CaptureError("Insufficient dated publisher HTML text")
+                locations = tuple(place for place, _ in selected_with_locations)
+                selected = [text for _, text in selected_with_locations]
+                partial = False
+            else:
+                extracted = extract_document(document.content, mime,
+                                             trusted_feed_date=trusted_feed_date)
+                published_at, basis = extracted.published_at, extracted.date_basis
+                selected, locations = extracted.excerpts, extracted.locations
+                method, partial = extracted.extraction_method, extracted.partial_extraction
+        except (UnicodeError, ExtractionHold) as exc:
+            raise CaptureError("Unsupported or unextractable document: " + type(exc).__name__) from None
+        if published_at is None or not 0 < published_at <= observed_at:
+            raise CaptureError("Publisher publication timestamp unavailable or future")
         return ArticleCapture(
             url=lead.url, publisher=host,
             published_at=published_at,
             captured_at=int(datetime.now(timezone.utc).timestamp()),
             origin=host, kind=self.permissions[host].kind,
             copyright_basis=self.permissions[host].copyright_basis,
-            document_sha256=hashlib.sha256(raw.encode("utf-8")).hexdigest(),
+            document_sha256=hashlib.sha256(document.content).hexdigest(),
             excerpts=tuple(selected),
+            publication_date_basis=basis or "unavailable",
+            mime_type=mime, excerpt_locations=tuple(locations),
+            extraction_method=method, partial_extraction=partial,
         )
 
 
@@ -291,7 +366,9 @@ def capture_discovery(packet: ContextDiscoveryPacket, gateway: SourceCaptureGate
         "three_independent_origins": len(origins) >= 3,
         "primary_record_included": any(row["kind"] in ("official_record", "original_research") for row in sources),
         "independent_reporting_included": any(row["kind"] == "independent_reporting" for row in sources),
-        "publisher_date_recorded": bool(sources) and all(row["publication_date_basis"] == "publisher_page_metadata" for row in sources),
+        "publisher_date_recorded": bool(sources) and all(row["publication_date_basis"] in {
+            "publisher_page_metadata", "embedded_json_metadata", "embedded_xml_metadata",
+            "first_party_official_feed"} for row in sources),
         "robots_policy_allowed": bool(sources) and all(row["robots_decision"] == "allowed" for row in sources),
         "full_document_digest": bool(sources) and all(len(row["document_sha256"]) == 64 for row in sources),
         "bounded_excerpt_size": bool(sources) and all(45 <= len(row["captured_excerpt"]) <= 370 for row in sources),

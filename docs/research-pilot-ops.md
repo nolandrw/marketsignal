@@ -107,23 +107,26 @@ final provider invoice never exceeds $2 due delayed metering.
   [real-case evaluation preparation](real-case-evaluation-v1.md) are source
   leads, not captured documents. The conservative Fed source gateway
   previously returned an HTTP error. No workaround was attempted.
-- The [GitHub CI source-shape probe (run 137)](https://github.com/nolandrw/marketsignal/actions/runs/41923807475)
-  confirmed **0 of 5 official leads were fully capturable** by the existing
-  gateway, even on a GitHub-hosted runner:
+- The [previous HTML-only GitHub CI source-shape probe (run 137)](https://github.com/nolandrw/marketsignal/actions/runs/41923807475)
+  found **0 of 5 official leads fully capturable under the old gateway**,
+  even on a GitHub-hosted runner. This is a historical result, **not a retest
+  of the expanded multi-format gateway**:
 
   | Lead | Observed outcome | Proper next step |
   |---|---|---|
   | Hormuz / MARAD advisory | HTTPError | Investigate allowed official feeds or alternative first-party records |
-  | IPO / SEC filing index | Index retrieved, but no supported dated document-body structure | Build bounded SEC filing ingestion with EDGAR metadata and original document checks |
+  | IPO / SEC filing index | Index retrieved, but no dated primary article-body structure | Find specific dated filings or official EDGAR structured feeds; validate document-level provenance |
   | Fed / FOMC statement | HTTPError | Explore official release feeds/PDFs under publisher permissions |
   | UAP / AARO report index | HTTPError | Identify supported original report formats and rights-compliant ingestion |
-  | UAP / NASA FAQ | Exceeded 240-KB HTML ceiling | Find a smaller official record or implement bounded targeted parsing |
+  | UAP / NASA FAQ | Exceeded old 240-KB HTML ceiling | Retest 2MB bounded official HTML extraction and date metadata |
 
   This probe saved only host-level diagnostics, never source text. Robots or
   publisher access denial remains a HOLD, not a reason to change user agents,
-  bypass rate limits or treat web snippets as authenticated captures. Supporting
-  official PDFs/structured feeds will require explicit format-specific date,
-  origin and content-hash validation plus regression tests.
+  bypass rate limits or treat web snippets as authenticated captures. The
+  expanded gateway now supports bounded PDF/JSON/CSV/XML/TSV/text and first-party
+  dates, document hashes and excerpt locations with offline regression tests.
+  Its updated CI shape probe must still be run against actual sources. PDF
+  OCR and blocked publisher access remain separate challenges.
 - The manual workflow is a draft PR change and is not yet on the default
   branch; nothing can be dispatched through that workflow until reviewed
   and merged.

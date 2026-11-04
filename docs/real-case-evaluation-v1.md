@@ -134,7 +134,9 @@ Omit `--test-fixture-file` for ordinary production-like triage testing.
   were executed in this preparation phase.
 - No complete, dated, permissioned original-source capture packet has been
   assembled for these four cases. The official Fed direct capture failed under
-  the existing conservative gateway; no bypass was attempted.
+  the earlier HTML gateway; no bypass was attempted. The expanded multi-format
+  ingestion path has offline tests, but still requires a fresh live source
+  readiness probe and dated original packets for the four cases.
 - The newest Investigator v3 dossier still needs a faithful mapping to the
   downstream Writer; the fictional replay uses an older feature fixture.
 - Missing historical price points prevent real movement-triggered selection

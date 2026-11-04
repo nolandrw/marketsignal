@@ -31,6 +31,7 @@ class ContextLead:
     publisher: str
     published_at: int
     factual_status: str = "discovery_only"
+    publication_date_basis: str = "discovery_only"
 
 
 @dataclass(frozen=True)

@@ -2,7 +2,7 @@
 
 import unittest
 
-from marketsignal.source_capture import HostPermission, SourceCaptureGateway
+from marketsignal.source_capture import FetchedDocument, HostPermission, SourceCaptureGateway
 from scripts.probe_pilot_sources import inspect
 
 
@@ -18,6 +18,10 @@ class FakeTransport:
     def get(self, url, *, max_bytes, media):
         self.urls.append(url)
         return self.robots if url.endswith("robots.txt") else self.page
+
+    def fetch_document(self, url, *, max_bytes):
+        self.urls.append(url)
+        return FetchedDocument(self.page.encode(), "text/html")
 
 
 def gateway(page, robots="User-agent: *\nAllow: /"):
@@ -40,7 +44,7 @@ class SourceProbeTests(unittest.TestCase):
 
     def test_undated_page_is_hold(self):
         checker, _ = gateway('<main><p>Official source lacks a date.</p></main>')
-        self.assertEqual(inspect("test", URL, checker)["status"], "parser_or_date_hold")
+        self.assertEqual(inspect("test", URL, checker)["status"], "date_metadata_hold")
 
     def test_robots_deny_never_requests_page(self):
         checker, fake = gateway("<main>Material</main>", "User-agent: *\nDisallow: /")

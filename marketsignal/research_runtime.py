@@ -44,6 +44,10 @@ def load_seed_captures(path: str | Path) -> tuple[ResearchCapture, ...]:
                 origin_key=item["independent_origin"], published_at=published,
                 captured_at=item["captured_at"], source_kind=item["kind"],
                 excerpt=item["captured_excerpt"],
+                document_sha256=item.get("document_sha256", ""),
+                content_location=item.get("content_location", ""),
+                mime_type=item.get("mime_type", ""),
+                publication_date_basis=item.get("publication_date_basis", ""),
             ))
     return tuple(captures)
 
@@ -57,8 +61,10 @@ def configure_research_sources(policy: dict) -> MultiSourceResearchProvider:
     publishers = policy.get("publishers", [])
     feeds = tuple(policy.get("official_feeds", ()))
     if (not isinstance(publishers, list) or not 1 <= len(publishers) <= 30 or
-            any(not isinstance(row, dict) or set(row) !=
-                {"host", "kind", "copyright_basis"} for row in publishers) or
+            any(not isinstance(row, dict) or
+                not {"host", "kind", "copyright_basis"} <= set(row) or
+                set(row) - {"host", "kind", "copyright_basis", "max_capture_bytes"}
+                for row in publishers) or
             not isinstance(policy.get("enable_bluesky", True), bool) or
             not isinstance(policy.get("enable_crossref", True), bool)):
         raise ValueError("Invalid publisher or social source policy")

@@ -300,7 +300,10 @@ class MultiSourceResearchProvider:
                         lead_id="lead" + hashlib.sha256(item.url.encode()).hexdigest()[:15],
                         role="contemporaneous_reporting", url=item.url,
                         title=item.title[:240], publisher=item.author_key[:150],
-                        published_at=item.posted_at), observed_at=as_of)
+                        published_at=item.posted_at,
+                        publication_date_basis=("first_party_official_feed"
+                                                if name == "official_feeds" else "discovery_only")),
+                        observed_at=as_of)
                     if not isinstance(page, ArticleCapture) or not page.excerpts:
                         raise CaptureError("Unusable capture")
                     capture = ResearchCapture(
@@ -309,6 +312,10 @@ class MultiSourceResearchProvider:
                         published_at=page.published_at, captured_at=page.captured_at,
                         source_kind=page.kind,
                         excerpt="\n".join(page.excerpts)[:2500],
+                        document_sha256=page.document_sha256,
+                        content_location=";".join(page.excerpt_locations)[:500],
+                        mime_type=page.mime_type,
+                        publication_date_basis=page.publication_date_basis,
                     )
                     if capture.captured_at > as_of + 30 * 60:
                         # The v3 orchestrator applies the tighter historical

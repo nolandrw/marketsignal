@@ -18,8 +18,8 @@ flowchart TD
   A["Archived qualifying price signal"] --> B["GDELT historical/recent discovery"]
   B --> C{"Publisher allowlist + robots"}
   C -- denied --> H["Research hold with reason"]
-  C -- allowed --> D["Bounded HTML capture"]
-  D --> E["Publisher date + digest + short excerpts"]
+  C -- allowed --> D["Bounded multi-format capture"]
+  D --> E["First-party date + digest + located excerpts"]
   E --> F{"Independent origins and primary record?"}
   F -- no --> H
   F -- yes --> G["Opt-in model claim extraction"]
@@ -36,12 +36,23 @@ flowchart TD
   arbitrary ports, IP-literal hosts, local endpoints or access circumvention.
 - Fetches publisher `robots.txt` and declines captures it disallows or whose
   crawl delay exceeds the bounded job budget. A missing/unreadable robots
-  document is a hold. Only HTML with an identifiable `article`/`main` body
-  is accepted; client-rendered or blocked pages remain holes in the dossier.
+  document is a hold. Client-rendered or blocked pages remain holes in the dossier.
+- The transport accepts HTML/XHTML, **text-based PDFs**, JSON/GeoJSON/JSON-LD,
+  CSV/TSV, XML/RSS/Atom, and UTF-8 plain text. It selects a parser from the
+  returned MIME type, with a PDF-signature-checked fallback for an official
+  `.pdf` delivered as `application/octet-stream`. HTML retains the strict
+  article parser and adds broader table/block extraction for approved official
+  records. Per-host download limits default to 2MB; allowlisted official hosts
+  can opt in to at most **16MB** through `max_capture_bytes` in their policy.
 - A publisher's own publication date is required, not the GDELT discovery
-  timestamp. The source must predate the candidate's **as-of** timestamp.
-- A full-page SHA-256 fingerprint is kept for provenance; only up to three
-  intact short paragraphs (each ≤370 characters) are saved as excerpts. This
+  timestamp. For official feeds, a dated **first-party** RSS/Atom item can
+  provide the date if its publisher host and document host match; embedded
+  JSON/XML publication metadata is also accepted. Date-only labels are treated
+  as end-of-day UTC, and the source must predate the candidate's **as-of**.
+- A SHA-256 fingerprint of the **original downloaded bytes** is kept, with
+  MIME, extraction method and locations (PDF page, JSON field pointer,
+  CSV row, XML element or text line). Only up to three bounded passages
+  (each ≤370 characters) are saved as excerpts. This
   is not permission to reproduce copyrighted reporting or images.
 - Captures from one domain count as **one origin**, no matter how many excerpts
   are saved. Before paid claim extraction, the package needs three origins,
@@ -50,6 +61,16 @@ flowchart TD
   contiguous excerpts. Deterministic checks reject fabricated excerpts and
   unsupported category-role labels. This does **not** constitute semantic
   truth verification: the claim could still overstate the excerpt.
+
+**Remaining format boundaries:** Scanned/image-only PDFs need a separately
+reviewed OCR path; encrypted PDFs, Excel workbooks, ZIP archives, binary
+proprietary formats and arbitrary API authentication are not yet supported.
+Malformed, excessively nested, undated, oversized, encrypted or publisher-
+blocked content is a **HOLD**, never a source or proof of a claim. A valid
+structured-field rendering is evidence attributed to a source location, not a
+verbatim sentence from its author. PDF text extraction is page-based and may
+lose table layout; numerical claims need primary-document checking.
+The optional PDF dependency is installed with `pip install -e '.[research]'`.
 
 ### Source policy
 
@@ -100,6 +121,10 @@ command always remains an **unpublished shadow**.
 
 - Controlled three-publisher HTML captures with three independently named
   origins and first-party publication timestamps.
+- Synthetic PDF, JSON variants, CSV/TSV, XML, text and official HTML table
+  captures, with original-byte digests, location fields, publication-date holds,
+  type limits, DTD rejection and permission checks. No live official source is
+  yet certified captured by these new format paths.
 - Publisher `robots.txt` allows and blocks; blocked links never reach article
   fetching.
 - HTML script/prompt injection is not treated as article evidence.
