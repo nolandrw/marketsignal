@@ -165,6 +165,30 @@ class WorkflowController:
     """Reconciles requested stage transitions with deterministic policy."""
 
     @staticmethod
+    def advance_investigator_v3(story: StoryState, investigation: dict,
+                                oversight: object) -> StoryState:
+        """Gate Investigator v3 -> Verifier through a separate overseer result.
+
+        The overseer may return work or hold it; an Investigator self-score
+        cannot directly move a case into editorial verification.
+        """
+        if (story.state != "investigating" or
+                investigation.get("case_id") != story.story_id or
+                getattr(oversight, "case_id", None) != story.story_id or
+                investigation.get("publication_enabled") is not False):
+            raise ValueError("Unrelated or out-of-order investigator handoff")
+        disposition = investigation.get("disposition")
+        if disposition == "spike":
+            return WorkflowController.advance(story, "spiked", reason="investigator_v3_spiked")
+        if disposition != "ready_for_verifier":
+            return WorkflowController.advance(story, "held", reason="investigator_v3_unready")
+        if (getattr(oversight, "status", None) != "to_verifier" or
+                getattr(oversight, "issues", None) or
+                getattr(oversight, "publication_enabled", True)):
+            return WorkflowController.advance(story, "held", reason="handoff_overseer_blocked")
+        return WorkflowController.advance(story, "verifying", reason="investigator_v3_overseen")
+
+    @staticmethod
     def advance(story: StoryState, target: str, *, reason: str,
                 owner_authorized: bool = False) -> StoryState:
         if story.state not in STATES or target not in TRANSITIONS.get(story.state, set()):
