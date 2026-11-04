@@ -23,6 +23,10 @@ An opt-in [Investigator v3](docs/investigator-v3.md) with a
 [multi-source retrieval and separated review gates](docs/public-retrieval-v1.md) is now
 available for private research trials; it is **not** invoked by the daily
 collector or capable of automatic publication.
+An explicit [test-only real-case evaluation route](docs/real-case-evaluation-v1.md)
+and a [manual $2 four-story research-pilot operating procedure](docs/research-pilot-ops.md)
+can exercise handpicked subjects without inventing missing market-price history;
+neither adds a permanent human editorial intake or bypasses source/release gates.
 
 MarketSignal is a portfolio-oriented, auditable pipeline for detecting meaningful
 changes in prediction-market contracts. It is designed to become a bounded
@@ -52,9 +56,10 @@ python -m marketsignal evaluate-agents --cases 120
 python -m marketsignal source-smoke --archive-dir data/archive
 python -m marketsignal investigate-archive --archive-file data/archive/2026-11-03.json
 python -m marketsignal newsroom-v3-demo
+python -m marketsignal model-budget-estimate --cases 4
 # Explicit opt-in live public research + provisional dossier Verifier (requires curated private context,
-# matching source captures, host rights policy and OPENAI_API_KEY):
-# python -m marketsignal research-v3-shadow --context-file data/private/topic-context.json --captures-file data/private/captured-context.json --policy-file data/private/research-policy.json --angle-id approved-angle-id
+# matching source captures, host rights policy, OPENAI_API_KEY, and a shared spending ceiling):
+# python -m marketsignal research-v3-shadow --context-file data/private/topic-context.json --captures-file data/private/captured-context.json --policy-file data/private/research-policy.json --angle-id approved-angle-id --max-model-spend-usd 2.00
 python -m marketsignal field-trial --case data/private/your_research_case.json --out reports/field-trial.md
 python -m marketsignal shadow-loop --mode replay --case tests/fixtures/fictional_field_trial.json --out reports/editorial-loop.md --trace reports/editorial-loop.json
 python -m marketsignal capture-context --archive-file data/archive/YYYY-MM-DD.json --policy-file examples/source-capture-policy.example.json --out data/private/captured-context.json
@@ -147,7 +152,9 @@ suppression window per market.
   [executable agentic loop](docs/agentic-shadow-loop.md).
 - A new, read-only **source-capture gateway** that takes historical/recent
   GDELT discovery leads through explicitly approved publishers, `robots.txt`,
-  publisher-date checks, bounded HTML extraction and short source fingerprints.
+  first-party publication-date checks, bounded HTML/PDF/structured-feed/plain-
+  text extraction, original-document hashes and located short excerpts.
+  Optional PDF extraction requires `pip install -e '.[research]'`.
   An opt-in claim-extraction stage turns diverse captured excerpts into a
   provisional research case, then hands it to the existing newspaper workflow.
   It cannot assume permission to scrape news outlets, cannot invent missing

@@ -131,6 +131,8 @@ class TopicLeadAssessment:
     revisit_condition: str
     referenced_source_ids: tuple[str, ...]
     publication_enabled: bool = False
+    evaluation_only: bool = False
+    test_fixture_reason: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -154,7 +156,21 @@ class TopicLeadAgent:
         self.model = model
 
     def assess(self, context: TopicLeadContext) -> TopicLeadAssessment:
-        raw = self.model.complete("topic_lead", context.to_dict())
+        """Production entry: ineligible quantitative pitches always remain held."""
+        return self._assess(context)
+
+    def _assess(self, context: TopicLeadContext, *, test_fixture_reason: str = "") -> TopicLeadAssessment:
+        """Private test-only hook; only evaluation_harness should set a reason."""
+        context_packet = context.to_dict()
+        if test_fixture_reason:
+            context_packet["test_only_evaluation"] = {
+                "quantitative_gate_override": True,
+                "reason": test_fixture_reason,
+                "original_quantitative_eligibility": context.quantitative_pitch.eligible_for_topic_review,
+                "original_quantitative_reasons": list(context.quantitative_pitch.reasons),
+                "publication_enabled": False,
+            }
+        raw = self.model.complete("topic_lead", context_packet)
         if not isinstance(raw, dict):
             raise ValueError("Topic Lead model must return an object")
         scores = raw["scores"]
@@ -222,7 +238,7 @@ class TopicLeadAgent:
                     reason_codes.append("score_below_research_floor")
             elif rubric.score < GO_THRESHOLD:
                 hold("score_below_go_threshold")
-            if not context.quantitative_pitch.eligible_for_topic_review:
+            if not context.quantitative_pitch.eligible_for_topic_review and not test_fixture_reason:
                 hold("quantitative_triage_not_eligible")
             if not context.resolution_terms.strip():
                 hold("unresolved_market_terms")
@@ -232,8 +248,11 @@ class TopicLeadAgent:
                 hold("stakes_not_established")
             if not angles or not research_questions:
                 hold("no_actionable_research_assignment")
+            # A pending coverage search is an explicit research assignment,
+            # not grounds to prevent the Investigator from searching at all.
+            # It must remain visible downstream; no publication is authorized.
             if not context.coverage_checked:
-                hold("coverage_not_checked")
+                reason_codes.append("coverage_review_pending")
             if not peg_ids and peg_type != "original_analysis":
                 hold("unsubstantiated_news_peg")
 
@@ -241,11 +260,8 @@ class TopicLeadAgent:
                               if source.source_id in referenced and
                               source.source_type in RESEARCH_LEAD_TYPES and
                               source.captured_excerpt}
-            one_primary_testable = (context.primary_has_independent_test and any(
-                source.source_id in referenced and source.source_type == "primary_record" and
-                source.captured_excerpt for source in context.sources))
-            if len(usable_origins) < 2 and not one_primary_testable:
-                hold("insufficient_independent_research_leads")
+            if not usable_origins:
+                hold("no_authentic_research_seed")
 
             covered = {angle_id for match in context.coverage_matches
                        if match.overlap == "complete" for angle_id in match.angle_ids}
@@ -258,6 +274,8 @@ class TopicLeadAgent:
             raise ValueError("Held Topic Lead pitch lacks a revisit condition")
         if not reason_codes:
             reason_codes = [f"topic_lead_{disposition}"]
+        if test_fixture_reason:
+            reason_codes.append("test_fixture_only_quantitative_override")
 
         return TopicLeadAssessment(
             story_id=context.story_id, disposition=disposition,
@@ -271,6 +289,7 @@ class TopicLeadAgent:
             uncertainties=uncertainties, sensitivity_flags=sensitivity_flags,
             revisit_condition=raw["revisit_condition"],
             referenced_source_ids=tuple(sorted(referenced)),
+            evaluation_only=bool(test_fixture_reason), test_fixture_reason=test_fixture_reason,
         )
 
 

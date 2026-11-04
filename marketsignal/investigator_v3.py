@@ -112,6 +112,10 @@ class ResearchCapture:
     captured_at: int
     source_kind: str
     excerpt: str
+    document_sha256: str = ""
+    content_location: str = ""
+    mime_type: str = ""
+    publication_date_basis: str = ""
 
     def __post_init__(self):
         try:
@@ -125,7 +129,10 @@ class ResearchCapture:
                 not self.publisher.strip() or not self.origin_key.strip() or
                 self.source_kind not in ALLOWED_SOURCE_KINDS or
                 not 0 < self.published_at <= self.captured_at or
-                not 30 <= len(self.excerpt) <= 2500):
+                not 30 <= len(self.excerpt) <= 2500 or
+                (self.document_sha256 and not re.fullmatch(r"[0-9a-f]{64}", self.document_sha256)) or
+                len(self.content_location) > 500 or len(self.mime_type) > 80 or
+                len(self.publication_date_basis) > 90):
             raise ValueError("Invalid dated investigative source capture")
 
 
@@ -168,8 +175,8 @@ def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapt
     Topic Lead. This bridge does not fetch documents or choose among angles.
     """
     if (assessment.disposition != "go" or context.story_id != assessment.story_id or
-            not context.coverage_checked or not angle_id):
-        raise ValueError("Unapproved or unreviewed Topic Lead handoff")
+            not angle_id):
+        raise ValueError("Unapproved Topic Lead handoff")
     selected = [a for a in assessment.angles if a.angle_id == angle_id]
     if len(selected) != 1:
         raise ValueError("Investigator angle must be explicitly selected")
@@ -177,10 +184,10 @@ def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapt
     metadata = {s.source_id: s for s in context.sources}
     captured = {s.source_id: s for s in captures}
     source_kind_map = {
-        "primary_record": "official_record",
-        "independent_reporting": "independent_reporting",
-        "public_statement": "statement",
-        "social_comment": "social_comment", "market_comment": "market_comment",
+        "primary_record": {"official_record", "original_research"},
+        "independent_reporting": {"independent_reporting"},
+        "public_statement": {"statement"},
+        "social_comment": {"social_comment"}, "market_comment": {"market_comment"},
     }
     if len(captures) != len(captured) or not set(angle.source_ids) <= set(captured):
         raise ValueError("Angle references evidence missing from the capture packet")
@@ -190,11 +197,13 @@ def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapt
                 source.published_at != lead.published_at or
                 source.origin_key != lead.origin_key or
                 source.publisher != lead.publisher or
-                source.source_kind != source_kind_map.get(lead.source_type)):
+                source.source_kind not in source_kind_map.get(lead.source_type, set())):
             raise ValueError("Topic Lead metadata differs from captured evidence")
-    coverage = assessment.coverage_analysis + "\n" + "\n".join(
+    coverage = (("COVERAGE UNREVIEWED: investigate prior reporting before claiming novelty.\n"
+                 if not context.coverage_checked else "") +
+                assessment.coverage_analysis + "\n" + "\n".join(
         f"{item.story_id}: {item.title} ({item.overlap})"
-        for item in context.coverage_matches)
+        for item in context.coverage_matches))
     return InvestigatorAssignment(
         case_id=context.story_id, as_of=context.as_of,
         topic=angle.central_question, topic_lead_angle=angle.working_headline,

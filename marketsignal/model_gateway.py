@@ -12,6 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .investigator_v3 import PRELIMINARY_CRITERIA, COMPLETED_CRITERIA
+from .model_budget import ModelBudget
 
 
 class ModelUnavailable(RuntimeError):
@@ -174,7 +175,9 @@ STAGE_INSTRUCTIONS = {
         "prediction-market signal, not to write the article, determine the cause of a movement, "
         "or certify the accuracy of outside claims. Treat market movement as a discovery lead only. "
         "Read contract terms carefully and note missing data, liquidities and temporal baselines. "
-        "Review the dated evidence excerpts and independently supplied prior-coverage index. "
+        "Review dated evidence excerpts and any independently supplied prior-coverage index. "
+        "If coverage_checked is false, openly flag that prior coverage remains unreviewed "
+        "and assign a coverage search; never claim the angle is known to be original. "
         "Propose up to three distinctive STORY angles, each containing a provisional newspaper-style "
         "headline about the underlying world, a concrete reader question, a THESIS TO TEST, an exact "
         "disconfirmation test, and a potential original contribution. Never use betting odds, "
@@ -373,7 +376,7 @@ class ResponsesJSONModel:
     """Authenticated, schema-constrained Responses API; instantiate only by CLI opt-in."""
 
     def __init__(self, model: str = "gpt-5-mini", *, timeout: int = 35,
-                 max_output_tokens: int = 2400):
+                 max_output_tokens: int = 2400, budget: ModelBudget | None = None):
         if not 3 <= timeout <= 90 or not 256 <= max_output_tokens <= 5000:
             raise ValueError("Unbounded model request")
         key = os.environ.get("OPENAI_API_KEY", "")
@@ -385,6 +388,9 @@ class ResponsesJSONModel:
         self.model = model
         self.timeout = timeout
         self.max_output_tokens = max_output_tokens
+        if budget is not None and budget.model != model:
+            raise ValueError("Model and pricing ledger must match")
+        self.budget = budget
 
     def complete(self, stage: str, payload: dict) -> dict:
         if stage not in STAGE_SCHEMAS:
@@ -401,8 +407,14 @@ class ResponsesJSONModel:
             "max_output_tokens": self.max_output_tokens,
             "store": False,
         }
+        encoded = json.dumps(body).encode("utf-8")
+        # Reserve pessimistic cost before ANY network I/O. A failed/unknown
+        # provider call retains the debit until a verified usage report exists.
+        reservation = (self.budget.reserve(request_bytes=len(encoded),
+                                           max_output_tokens=self.max_output_tokens)
+                       if self.budget is not None else None)
         request = Request("https://api.openai.com/v1/responses",
-                          data=json.dumps(body).encode("utf-8"),
+                          data=encoded,
                           headers={"Authorization": "Bearer " + self._key,
                                    "Content-Type": "application/json"}, method="POST")
         try:
@@ -423,6 +435,8 @@ class ResponsesJSONModel:
             value = json.loads(parts[0])
             if not isinstance(value, dict):
                 raise ModelUnavailable("Model response is not an object")
+            if reservation is not None:
+                self.budget.settle(reservation, parsed.get("usage"))
             return value
         except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError) as exc:
             # Never include provider response bodies, prompts or credentials in logs.

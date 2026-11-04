@@ -15,6 +15,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install bounded PDF extraction and fixture libraries
+        run: python -m pip install -e '.[research]' 'reportlab>=4,<5'
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
       - name: Check code and deployment script syntax
@@ -46,5 +48,18 @@ jobs:
         if: github.event_name == 'push'
         continue-on-error: true
         run: python -m marketsignal source-smoke --archive-dir data/archive
+      - name: Probe official pilot sources without models or stored content
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 2
+        continue-on-error: true
+        run: python -m scripts.probe_pilot_sources > pilot-source-readiness.json
+      - name: Retain sanitized pilot source readiness for seven days
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-source-readiness
+          path: pilot-source-readiness.json
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Build production container
         run: docker build --tag marketsignal:ci .

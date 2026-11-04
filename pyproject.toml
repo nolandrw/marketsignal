@@ -11,6 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2,<4"]
+research = ["pypdf>=6.19,<7"]
 
 [project.scripts]
 marketsignal = "marketsignal.cli:main"

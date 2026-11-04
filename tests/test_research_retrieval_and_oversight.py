@@ -13,6 +13,7 @@ from unittest.mock import patch
 from marketsignal.agent_sources import CrossrefSearch, SourceLead
 from marketsignal.handoff_contract import HandoffContractGateway
 from marketsignal.evidence_verifier import ClaimJudgment, EvidenceVerifier, ModelClaimReview
+from marketsignal.evaluation_harness import ResearchTestFixture
 from marketsignal.oversight import ProcessFailureEvent, ProcessOverseer
 from marketsignal.investigator_v3 import ResearchBatch, ResearchLead
 from marketsignal.research_retrieval import (
@@ -340,6 +341,30 @@ class ResearchAndOversightTests(unittest.TestCase):
                 if verdict == "contradicted":
                     self.assertIn("claim_contradicted", {
                         e["reason_code"] for e in result["process_events"]})
+            seeded_case = replace(case, quantitative_pitch=replace(
+                case.quantitative_pitch, eligible_for_topic_review=False,
+                changes_pp={}, baseline_times={}, reasons=("no_historical_baseline",)))
+            fixture = ResearchTestFixture(seeded_case.story_id,
+                                          seeded_case.quantitative_pitch.market_id,
+                                          seeded_case.as_of,
+                                          "Test-only human-selected subject without fabricated prices")
+            seeded_model = StageModel("supported")
+            seeded = run_research_shadow(seeded_case, captures[:1],
+                                         angle_id="auto:first", research_policy={},
+                                         model=seeded_model, test_fixture=fixture)
+            self.assertEqual(seeded["status"], "provisionally_verified_for_editorial_review")
+            self.assertTrue(seeded["evaluation_only"])
+            self.assertEqual(seeded["topic_lead"]["selected_angle_id"], "timeline-delay")
+            self.assertEqual(seeded_model.calls, ["topic_lead", "dossier_evidence_verifier"])
+            unreviewed = run_research_shadow(
+                replace(seeded_case, coverage_checked=False), captures[:1],
+                angle_id="auto:first", research_policy={}, model=StageModel("supported"),
+                test_fixture=fixture)
+            self.assertEqual(unreviewed["status"], "held_pending_coverage_review")
+            self.assertFalse(unreviewed["publication_enabled"])
+            with self.assertRaises(ValueError):
+                run_research_shadow(case, captures[:1], angle_id="auto:first",
+                                    research_policy={}, model=StageModel("supported"))
 
     def test_explicit_private_runtime_configuration_and_existing_capture_rows(self):
         provider = configure_research_sources({

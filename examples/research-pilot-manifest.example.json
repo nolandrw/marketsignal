@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "name": "hormuz",
+      "context_file": "data/private/hormuz-context.json",
+      "captures_file": "data/private/hormuz-captures.json",
+      "policy_file": "data/private/hormuz-policy.json",
+      "test_fixture_file": "data/private/hormuz-fixture.json",
+      "angle_id": "auto:first"
+    },
+    {
+      "name": "ipo",
+      "context_file": "data/private/ipo-context.json",
+      "captures_file": "data/private/ipo-captures.json",
+      "policy_file": "data/private/ipo-policy.json",
+      "test_fixture_file": "data/private/ipo-fixture.json",
+      "angle_id": "auto:first"
+    },
+    {
+      "name": "fed",
+      "context_file": "data/private/fed-context.json",
+      "captures_file": "data/private/fed-captures.json",
+      "policy_file": "data/private/fed-policy.json",
+      "test_fixture_file": "data/private/fed-fixture.json",
+      "angle_id": "auto:first"
+    },
+    {
+      "name": "uap",
+      "context_file": "data/private/uap-context.json",
+      "captures_file": "data/private/uap-captures.json",
+      "policy_file": "data/private/uap-policy.json",
+      "test_fixture_file": "data/private/uap-fixture.json",
+      "angle_id": "auto:first"
+    }
+  ]
+}

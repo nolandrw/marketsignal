@@ -168,7 +168,8 @@ class SourceCaptureTests(unittest.TestCase):
             archive.write_text(json.dumps({"schema_version": 1, "signals": [], "markets": []}),
                                encoding="utf-8")
             policy.write_text(json.dumps([{"host": "www.example.gov", "kind": "official_record",
-                                           "copyright_basis": "official_public_record"}]),
+                                           "copyright_basis": "official_public_record",
+                                           "max_capture_bytes": 16_000_000}]),
                               encoding="utf-8")
             stream = io.StringIO()
             with redirect_stdout(stream):

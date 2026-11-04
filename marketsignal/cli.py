@@ -26,6 +26,8 @@ from .context_discovery import ContextDiscoveryAgent
 from .feature_demo import fictional_feature_fixture
 from .fictional_investigator_v3 import run_fictional_v3_handoff
 from .research_runtime import load_seed_captures, run_research_shadow
+from .evaluation_harness import load_test_fixture
+from .model_budget import ModelBudget, estimate_pilot_cost
 from .feature_story import FeatureNewsroom, assign_reporting_from_archive
 from .context_discovery import discover_archive as discover_context_archive
 from .gamma import GammaError, discover_markets
@@ -387,6 +389,16 @@ def main(argv: list[str] | None = None) -> int:
     research.add_argument("--angle-id", required=True, help="Explicit selected Topic Lead angle")
     research.add_argument("--out", default="data/private/investigator-v3-shadow.json")
     research.add_argument("--model", default="gpt-5-mini", help="Opt-in API model; may incur charges")
+    research.add_argument("--max-model-spend-usd", required=True,
+                          help="Required total shared USD ceiling for model API calls")
+    research.add_argument("--model-budget-db", default="data/private/model-budget.sqlite",
+                          help="Private shared budget ledger across all case runs")
+    research.add_argument("--test-fixture-file", default=None,
+                          help="Optional explicitly private, test-only subject; bypasses quantitative eligibility only")
+    estimate = commands.add_parser("model-budget-estimate",
+                                   help="Zero-cost illustrative pilot API estimate")
+    estimate.add_argument("--model", default="gpt-5-mini")
+    estimate.add_argument("--cases", type=int, default=4)
     field = commands.add_parser("field-trial", help="Audit a real-topic curated evidence case and render a held shadow article")
     field.add_argument("--case", required=True)
     field.add_argument("--out", default="reports/field-trial.md")
@@ -488,18 +500,31 @@ def main(argv: list[str] | None = None) -> int:
             if policy_file.stat().st_size > 64_000:
                 raise ValueError("Oversized source policy")
             policy = json.loads(policy_file.read_text(encoding="utf-8"))
+            budget = ModelBudget(arguments.model_budget_db, arguments.max_model_spend_usd,
+                                 model=arguments.model)
             result = run_research_shadow(context, captures, angle_id=arguments.angle_id,
                                          research_policy=policy,
-                                         model=ResponsesJSONModel(arguments.model))
+                                         model=ResponsesJSONModel(arguments.model, budget=budget),
+                                         test_fixture=(load_test_fixture(arguments.test_fixture_file)
+                                                       if arguments.test_fixture_file else None))
         except (OSError, ValueError, KeyError, TypeError, ModelUnavailable,
                 RuntimeError, TimeoutError) as exc:
             print(json.dumps({"status": "research_hold", "reason": type(exc).__name__,
                               "publication_enabled": False}))
             return 1
         output.parent.mkdir(parents=True, exist_ok=True)
+        result["model_spending"] = budget.summary()
         output.write_text(json.dumps(result, indent=2), encoding="utf-8")
         print(json.dumps({"status": result["status"], "case_id": result["case_id"],
-                          "private_output": str(output), "publication_enabled": False}))
+                          "private_output": str(output), "publication_enabled": False,
+                          "model_spending": budget.summary()}))
+        return 0
+    if arguments.command == "model-budget-estimate":
+        try:
+            print(json.dumps(estimate_pilot_cost(model=arguments.model,
+                                                 cases=arguments.cases), indent=2))
+        except ValueError as exc:
+            parser.error(str(exc))
         return 0
     if arguments.command == "field-trial":
         case = load_case(arguments.case)
@@ -559,7 +584,9 @@ def main(argv: list[str] | None = None) -> int:
         policy_raw = json.loads(Path(arguments.policy_file).read_text(encoding="utf-8"))
         if (not isinstance(policy_raw, list) or not 1 <= len(policy_raw) <= 30 or
                 any(not isinstance(row, dict) or
-                    set(row) != {"host", "kind", "copyright_basis"} for row in policy_raw)):
+                    not {"host", "kind", "copyright_basis"} <= set(row) or
+                    set(row) - {"host", "kind", "copyright_basis", "max_capture_bytes"}
+                    for row in policy_raw)):
             parser.error("Publisher policy must be a bounded allowlist")
         gateway = SourceCaptureGateway(tuple(HostPermission(**row) for row in policy_raw))
         archive = json.loads(Path(arguments.archive_file).read_text(encoding="utf-8"))

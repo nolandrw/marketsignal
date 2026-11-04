@@ -35,9 +35,10 @@ The typed `InvestigatorAssignment` contains:
    a substantive bounded excerpt.
 
 The `assignment_from_topic_lead` bridge takes an explicit `angle_id`, checks
-the GO, story ID, prior-coverage check and selected angle, and rejects
+the GO, story ID and selected angle, and rejects
 mismatches between the Topic Lead source metadata and trusted captured
 material (URL, publisher, published time, origin and source category).
+It carries missing prior-coverage review as an explicit pending research task.
 It never elevates metadata-only article leads into verified documents. The
 actual newsroom controller **does not yet invoke this bridge**.
 
@@ -45,7 +46,7 @@ actual newsroom controller **does not yet invoke this bridge**.
 
 | Phase | Intended budget | Required outcome | Stop conditions |
 |---|---|---|---|
-| Intake | Prior Topic Lead GO ≥65, source manifest, checked coverage | Accept a bounded question and evidence seed | No GO, missing/wrong captures or unreviewed angle → HOLD |
+| Intake | Prior Topic Lead GO ≥65, source manifest, disclosed coverage status | Accept a bounded question and authentic evidence seed | No GO, missing/wrong captures or invalid angle → HOLD |
 | Preliminary | About 2–4 min; 1–3 queries, max 4 captures each | Score *potential* information gain; name rival explanation and discriminating test | Model HOLD/SPIKE respected; score below 70 or any critical criterion `none` → HOLD |
 | Deep reporting | About 10–15 min; 1–5 further queries, max 4 captures each | Compare original reporting, chronology, coverage and contradictory evidence | Budget failure, inaccessible records or no new deep evidence → HOLD |
 | Dossier | Up to 30 distinct captures total and 8 search calls | Source-linked claims, dates, rival/null theories, novelty delta, 0–3 pitches | Malformed/unsourced dossier, future dates, inadequate origin diversity, unreviewed new case, completed score below 75 → HOLD |
