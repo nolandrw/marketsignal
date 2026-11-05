@@ -51,15 +51,14 @@ def context():
 def proposal():
     return {
         "requested_disposition": "go",
-        "scores": {"news_peg": 5, "consequences": 4, "editorial_potential": 4,
-                   "originality": 4, "research_feasibility": 4, "timeliness": 4},
+        "scores": {"market_signal_quality": 5, "real_world_significance": 4,
+                   "evidence_quality": 4, "timeliness": 4, "reader_usefulness": 4},
         "score_rationales": {
-            "news_peg": "Dated official notice records an actual delay",
-            "consequences": "Residents need flood protection",
-            "editorial_potential": "Technical review threatens long-promised protection",
-            "originality": "The local tradeoffs merit independent assessment",
-            "research_feasibility": "Independent documentary and reporting leads",
+            "market_signal_quality": "Dated market movement with a recorded baseline",
+            "real_world_significance": "Residents need flood protection",
+            "evidence_quality": "Independent documentary and reporting leads",
             "timeliness": "A newly postponed city decision",
+            "reader_usefulness": "Explain the delay and which residents are affected",
         },
         "news_peg_type": "documented_development",
         "news_peg": "A vote was postponed",
@@ -74,7 +73,7 @@ def proposal():
                     "central_question": "Why did approval slip?",
                     "thesis_to_test": "An unfinished survey upset the projected timetable",
                     "disconfirmation_test": "Find a dated document showing the survey is complete",
-                    "novel_contribution": "Explain a consequential engineering tradeoff",
+                    "reader_value": "Explain a consequential engineering tradeoff",
                     "source_ids": ["notice", "impact"]}],
         "counterevidence": ["Delay alone does not prove design failure"],
         "research_questions": ["What does the engineering study actually show?"],
@@ -98,7 +97,7 @@ class TopicLeadTests(unittest.TestCase):
     def test_balanced_go_requires_independent_sourced_assignment(self):
         model = RecordedModel(proposal())
         result = TopicLeadAgent(model).assess(context())
-        self.assertEqual(result.score, 84)
+        self.assertEqual(result.score, 85)
         self.assertEqual(result.disposition, "go")
         self.assertEqual(result.referenced_source_ids, ("impact", "notice"))
         self.assertFalse(result.publication_enabled)
@@ -106,14 +105,14 @@ class TopicLeadTests(unittest.TestCase):
 
     def test_65_is_minimum_go_threshold_with_gates(self):
         response = proposal()
-        response["scores"] = {"news_peg": 3, "consequences": 3,
-                              "editorial_potential": 3, "originality": 3,
-                              "research_feasibility": 4, "timeliness": 4}
+        response["scores"] = {"market_signal_quality": 3, "real_world_significance": 3,
+                              "evidence_quality": 5, "timeliness": 3,
+                              "reader_usefulness": 2}
         accepted = TopicLeadAgent(RecordedModel(response)).assess(context())
         self.assertEqual(accepted.score, 65)
         self.assertEqual(accepted.disposition, "go")
-        response["scores"]["research_feasibility"] = 3
-        response["scores"]["timeliness"] = 5
+        response["scores"]["evidence_quality"] = 4
+        response["scores"]["timeliness"] = 4
         held = TopicLeadAgent(RecordedModel(response)).assess(context())
         self.assertEqual(held.score, 64)
         self.assertEqual(held.disposition, "hold")
@@ -121,11 +120,11 @@ class TopicLeadTests(unittest.TestCase):
 
     def test_high_stakes_low_score_is_held_not_automatically_spiked(self):
         response = proposal()
-        response["scores"] = {"news_peg": 1, "consequences": 5,
-                              "editorial_potential": 1, "originality": 0,
-                              "research_feasibility": 1, "timeliness": 0}
+        response["scores"] = {"market_signal_quality": 1, "real_world_significance": 5,
+                              "evidence_quality": 1, "timeliness": 0,
+                              "reader_usefulness": 1}
         assessed = TopicLeadAgent(RecordedModel(response)).assess(context())
-        self.assertEqual(assessed.score, 31)
+        self.assertEqual(assessed.score, 37)
         self.assertEqual(assessed.disposition, "hold")
         self.assertIn("high_consequence_exception", assessed.reason_codes)
 
@@ -163,12 +162,22 @@ class TopicLeadTests(unittest.TestCase):
         self.assertEqual(result.disposition, "go")
         self.assertIn("coverage_review_pending", result.reason_codes)
 
-    def test_exact_angle_duplication_spikes_only_existing_angles(self):
+    def test_other_outlets_covering_same_angle_does_not_spike(self):
         candidate = replace(context(), coverage_matches=(CoverageMatch(
             "old-story", "Existing article on same delay", "complete", ("timeline-delay",)),))
         result = TopicLeadAgent(RecordedModel(proposal())).assess(candidate)
-        self.assertEqual(result.disposition, "spike")
-        self.assertIn("all_angles_duplicative", result.reason_codes)
+        self.assertEqual(result.disposition, "go")
+        self.assertNotIn("all_angles_duplicative", result.reason_codes)
+
+    def test_originality_is_not_in_scoring_contract(self):
+        scores = STAGE_SCHEMAS["topic_lead"]["properties"]["scores"]["properties"]
+        self.assertEqual(set(scores), {"market_signal_quality", "real_world_significance",
+                                      "evidence_quality", "timeliness", "reader_usefulness"})
+        self.assertNotIn("originality", scores)
+        response = proposal()
+        response["scores"]["originality"] = 5
+        with self.assertRaisesRegex(ValueError, "Invalid Topic Lead rubric"):
+            TopicLeadAgent(RecordedModel(response)).assess(context())
 
     def test_unknown_source_cannot_enter_handoff(self):
         response = proposal()
@@ -197,7 +206,7 @@ class TopicLeadTests(unittest.TestCase):
     def test_provider_prompt_has_exact_stage_schema_and_safety_scope(self):
         self.assertEqual(STAGE_SCHEMAS["topic_lead"]["additionalProperties"], False)
         instruction = STAGE_INSTRUCTIONS["topic_lead"]
-        for expected in ("65/100", "LOW-RELIABILITY", "original", "untrusted"):
+        for expected in ("65/100", "LOW-RELIABILITY", "reader_usefulness", "untrusted"):
             self.assertIn(expected.lower(), instruction.lower())
 
     def test_private_context_file_roundtrip_and_no_key_hold(self):
@@ -223,7 +232,7 @@ class TopicLeadTests(unittest.TestCase):
             response["requested_disposition"] = disposition
             result = TopicLeadAgent(RecordedModel(response)).assess(context())
             self.assertEqual(result.disposition, disposition)
-            self.assertEqual(result.score, 84)
+            self.assertEqual(result.score, 85)
 
 
 if __name__ == "__main__":

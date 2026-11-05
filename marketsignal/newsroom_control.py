@@ -87,31 +87,30 @@ class ClaimReview:
 
 @dataclass(frozen=True)
 class TopicRubric:
-    news_peg: int
-    consequences: int
-    editorial_potential: int
-    originality: int
-    research_feasibility: int
+    market_signal_quality: int
+    real_world_significance: int
+    evidence_quality: int
     timeliness: int
+    reader_usefulness: int
     source_ids: tuple[str, ...] = ()
 
     def __post_init__(self):
-        for name in ("news_peg", "consequences", "editorial_potential", "originality",
-                     "research_feasibility", "timeliness"):
+        for name in ("market_signal_quality", "real_world_significance",
+                     "evidence_quality", "timeliness", "reader_usefulness"):
             if not 0 <= getattr(self, name) <= 5:
                 raise ValueError("Topic rubric dimensions must be 0..5")
 
     @property
     def score(self) -> int:
         # Fixed, editorially chosen weights; these are not trained probabilities.
-        return (self.news_peg * 4 + self.consequences * 4 +
-                self.editorial_potential * 4 + self.originality * 3 +
-                self.research_feasibility * 3 + self.timeliness * 2)
+        return (self.market_signal_quality * 5 + self.real_world_significance * 5 +
+                self.evidence_quality * 4 + self.timeliness * 3 +
+                self.reader_usefulness * 3)
 
     @property
     def eligible(self) -> bool:
         # Preliminary only; TopicLeadAgent applies independent, mandatory gates.
-        return bool(self.score >= 65 and self.news_peg > 0 and self.source_ids)
+        return bool(self.score >= 65 and self.market_signal_quality > 0 and self.source_ids)
 
 
 @dataclass(frozen=True)

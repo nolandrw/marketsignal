@@ -2,9 +2,9 @@
 
 **Status (November 4, 2026):** owner approved **up to $2 total** for the
 four-story shadow evaluation. This is not a standing subscription, per-run
-allowance or approval to publish. A four-case private seed bundle is now
-packable locally; no API key is present in this execution environment and
-**no paid call has executed**.
+allowance or approval to publish. The owner configured billing, a project
+hard limit and GitHub environment secrets, and reported an initial one-cent
+API validation charge. An independent local API key is not present.
 
 ## Security and spend prerequisites
 
@@ -100,10 +100,15 @@ Do not paste the key, passphrase or bundle into a chat, issue, PR or CI log.
    pushes, PRs or schedules.
 3. The runner checks for all three secrets, runs offline unit tests, unpacks
    and validates *all four* private cases before making any paid call.
-4. It runs the cases sequentially through `research-v3-shadow`, reusing
+4. It runs the cases sequentially through `research-v3-shadow --include-article`, reusing
    `data/private/pilot-model-budget.sqlite` and a **shared $2 application
-   ceiling**. A case error halts later calls; each actual model result remains
-   publication-disabled.
+   ceiling**. A case error halts later calls. Cases whose source dossiers pass
+   the handoff contract and provisional dossier Verifier continue through
+   independent pitch review, chief editor, drafting, deterministic source/copy
+   checks, paragraph-level fact review and a quality-review gate. A HOLD at
+   any stage prevents release; if a dossier is insufficient, no real article
+   is generated for that case. Every result stays publication-disabled and
+   requires human fact checking and owner approval before any future release.
 5. Full results and the spending ledger are encrypted using the independent
    passphrase before a seven-day GitHub Actions artifact is uploaded. Nothing
    posts to a newsroom, website, social channel or trading venue.
@@ -122,8 +127,8 @@ final provider invoice never exceeds $2 due delayed metering.
 ## Readiness blockers
 
 - Nolan reported configuring the GitHub environment/API key on November 4.
-  This runtime cannot inspect or retrieve the secret, and no paid job has
-  been dispatched. The local development process still has no API key.
+  This runtime cannot inspect or retrieve the secret. The local development
+  process still has no API key.
 - The four pilot cases now have authentic, permissioned **seed** packets
   under `data/private/`, which pass offline preflight. They do not yet have
   verified, publication-sufficient evidence dossiers. Official URLs in
@@ -159,9 +164,8 @@ final provider invoice never exceeds $2 due delayed metering.
   Thus, retrieval availability varies by network; neither result is permission
   to circumvent a blocked site. These two individual captures are **not**
   complete four-case evidence packets and have not undergone semantic review.
-- The manual workflow is a draft PR change and is not yet on the default
-  branch; nothing can be dispatched through that workflow until reviewed
-  and merged.
+- The manual workflow must be present on the default branch before it can be
+  dispatched. This operator checklist does not itself trigger a paid job.
 - **November 4 current-quote preparation:** seven original documents were
   successfully captured from five distinct official source hosts, but not
   sufficiently distributed across cases:

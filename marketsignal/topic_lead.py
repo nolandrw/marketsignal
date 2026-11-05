@@ -25,8 +25,8 @@ VALID_SOURCE_TYPES = {
 }
 RESEARCH_LEAD_TYPES = {"primary_record", "independent_reporting", "public_statement"}
 RUBRIC_FIELDS = (
-    "news_peg", "consequences", "editorial_potential", "originality",
-    "research_feasibility", "timeliness",
+    "market_signal_quality", "real_world_significance", "evidence_quality",
+    "timeliness", "reader_usefulness",
 )
 
 
@@ -96,13 +96,13 @@ class TopicAngle:
     central_question: str
     thesis_to_test: str
     disconfirmation_test: str
-    novel_contribution: str
+    reader_value: str
     source_ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
         if not all((self.angle_id.strip(), self.working_headline.strip(),
                     self.central_question.strip(), self.thesis_to_test.strip(),
-                    self.disconfirmation_test.strip(), self.novel_contribution.strip())):
+                    self.disconfirmation_test.strip(), self.reader_value.strip())):
             raise ValueError("Incomplete Topic Lead angle")
         if re.search(r"\b(polymarket|kalshi|prediction markets?|betting odds|market odds)\b|%",
                      self.working_headline, re.IGNORECASE):
@@ -189,7 +189,7 @@ class TopicLeadAgent:
             angle_id=a["angle_id"], working_headline=a["working_headline"],
             central_question=a["central_question"], thesis_to_test=a["thesis_to_test"],
             disconfirmation_test=a["disconfirmation_test"],
-            novel_contribution=a["novel_contribution"],
+            reader_value=a["reader_value"],
             source_ids=_strings(a["source_ids"]),
         ) for a in raw_angles)
         if len({a.angle_id for a in angles}) != len(angles):
@@ -231,7 +231,7 @@ class TopicLeadAgent:
                 reason_codes.append(reason)
 
             if rubric.score < HOLD_THRESHOLD:
-                if rubric.consequences >= 4:
+                if rubric.real_world_significance >= 4:
                     hold("high_consequence_exception")
                 else:
                     disposition = "spike"
@@ -263,11 +263,8 @@ class TopicLeadAgent:
             if not usable_origins:
                 hold("no_authentic_research_seed")
 
-            covered = {angle_id for match in context.coverage_matches
-                       if match.overlap == "complete" for angle_id in match.angle_ids}
-            if angles and all(angle.angle_id in covered for angle in angles):
-                disposition = "spike"
-                reason_codes.append("all_angles_duplicative")
+            # Other outlets' reporting is useful evidence, not an originality
+            # veto. Avoid duplicate *internal publications* downstream instead.
 
         if disposition == "hold" and not raw["revisit_condition"].strip():
             # Never archive an indefinite HOLD without an explicit reopening condition.

@@ -120,17 +120,17 @@ statistically significant simply because of a threshold.
 and an independently checked recent article index. **Output:** a bounded,
 provisional newspaper pitch with competing angles, explicit disconfirmation
 tests, source IDs, counterevidence, research requests and GO/HOLD/SPIKE outcome.
-The fixed rubric in code is **news peg 20, consequences 20, editorial potential
-20, original contribution 15, research feasibility 15, timeliness 10**.
+The fixed rubric in code is **market signal quality 25, real-world significance
+25, evidence quality 20, timeliness 15, reader usefulness 15**.
 GO requires at least 65/100 **and** separate hard gates. An unexplained market
 movement is held for bounded research; high-consequence uncertain stories
-can also be held rather than prematurely spiked. Duplicate checking is by
-editorial angle, not simply subject matter.
+can also be held rather than prematurely spiked. Prior coverage is research
+context, not an originality gate; internal repeat publication is a separate concern.
 
 - Process: grounding 30; duplicate search 20; explicit stakes 20;
   counterexamples 15; disciplined handoff 15.
 - Result: independently judged story selection 35; false-positive avoidance
-  25; novelty 20; diversity across categories 10; timeliness 10.
+  25; reader usefulness 20; diversity across categories 10; timeliness 10.
 - Do not confuse a popular betting event with an actual new development.
   The Topic Lead's assessment is **not** an independently verified research
   verdict. A real connected archival similarity index is still missing.
@@ -148,7 +148,7 @@ sources and test whether correlated events predate a price move.
 
 - Process: source/date metadata 25; primary and independent origins 25;
   counterevidence 20; theory/claim separation 20; bounded research 10.
-- Result: significant verified new context 30; timeline accuracy 20;
+- Result: accurate synthesized context 30; timeline accuracy 20;
   competing explanations 20; informative quotes 15; human stakes 15.
 - Do not manufacture interviews or present a source's speculation as fact.
 
@@ -197,7 +197,7 @@ and cannot legitimately offer a polished model-written long-form article.
 - Process: cite every factual paragraph 30; no invented data 30; comply
   with assignment 20; revisions 10; correct length 10.
 - Result: readability 25; storytelling 25; informational value 25; accuracy
-  15; originality 10.
+  15; reader usefulness 10.
 - Up to **two editorial rewrite returns**, then hold and log the failure.
 
 ### 7. Copy editor

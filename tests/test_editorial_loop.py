@@ -183,7 +183,7 @@ class EditorialShadowLoopTests(unittest.TestCase):
     def test_invalid_editor_rubric_is_held_without_writer(self):
         def score_wrong(stage, payload, output, calls):
             if stage == "chief_editor":
-                output["scores"]["original_value"] = 900
+                output["scores"]["reader_value"] = 900
             return output
 
         model = InterceptingModel(self.case, score_wrong)
@@ -201,7 +201,7 @@ class EditorialShadowLoopTests(unittest.TestCase):
                 output["scores"] = {
                     "central_conflict": 20, "public_significance": 20,
                     "surprise_or_reversal": 14, "specificity": 14,
-                    "evidence_strength": 14, "original_value": 9,
+                    "evidence_strength": 14, "reader_value": 9,
                     "narrative_depth": 5,
                 }
             return output

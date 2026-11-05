@@ -147,6 +147,7 @@ def run() -> int:
                 "--captures-file", case["captures_file"],
                 "--policy-file", case["policy_file"],
                 "--test-fixture-file", case["test_fixture_file"],
+                "--include-article",
                 "--angle-id", case["angle_id"],
                 "--max-model-spend-usd", LIMIT_USD,
                 "--model-budget-db", str(ledger.path),

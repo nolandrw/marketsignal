@@ -1,7 +1,7 @@
 """Explicit story-angle handoff between investigation, verification and editing.
 
 These are deterministic completeness/provenance checks, NOT an AI verdict on
-originality, newsworthiness, factual accuracy or publishability. Those require
+reader usefulness, newsworthiness, factual accuracy or publishability. Those require
 independent source review and reader/editor assessments.
 """
 
@@ -18,7 +18,7 @@ RUBRIC_WEIGHTS = {
     "surprise_or_reversal": 15,
     "specificity": 15,
     "evidence_strength": 15,
-    "original_value": 10,
+    "reader_value": 10,
     "narrative_depth": 5,
 }
 
@@ -32,7 +32,7 @@ class StoryPitch:
     surprise: str
     why_now: str
     stakes: str
-    original_value: str
+    reader_value: str
     supporting_claim_ids: tuple[str, ...]
     contrary_claim_ids: tuple[str, ...]
 
@@ -85,7 +85,7 @@ def audit_story_selection(
         if not re.fullmatch(r"[a-z][a-z0-9_-]{2,60}", pitch.pitch_id):
             issues.append("invalid_story_pitch_id")
         if any(not getattr(pitch, key).strip() or len(getattr(pitch, key)) < 22
-               for key in ("thesis", "conflict", "surprise", "why_now", "stakes", "original_value")):
+               for key in ("thesis", "conflict", "surprise", "why_now", "stakes", "reader_value")):
             issues.append("incomplete_story_pitch")
         if headline_issues(pitch.working_headline):
             issues.append("weak_pitch_headline")
@@ -132,7 +132,7 @@ def parse_story_pitches(values: object) -> tuple[StoryPitch, ...]:
             pitch_id=value["pitch_id"], working_headline=value["working_headline"],
             thesis=value["thesis"], conflict=value["conflict"],
             surprise=value["surprise"], why_now=value["why_now"],
-            stakes=value["stakes"], original_value=value["original_value"],
+            stakes=value["stakes"], reader_value=value["reader_value"],
             supporting_claim_ids=tuple(value["supporting_claim_ids"]),
             contrary_claim_ids=tuple(value["contrary_claim_ids"]),
         ))
