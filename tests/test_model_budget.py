@@ -29,7 +29,7 @@ class ModelBudgetTests(unittest.TestCase):
     def test_zero_cost_four_case_estimate(self):
         estimate = estimate_pilot_cost()
         self.assertEqual(estimate["total_calls"], 20)
-        self.assertEqual(estimate["estimated_usd"], 0.146)
+        self.assertEqual(estimate["estimated_usd"], 0.25)
         self.assertEqual(main(["model-budget-estimate", "--cases", "4"]), 0)
 
     def test_settlement_refunds_to_actual_and_persists_across_instances(self):
@@ -89,6 +89,9 @@ class ModelBudgetTests(unittest.TestCase):
             value = gateway.complete("topic_lead", {"test": True})
         self.assertEqual(value, {"result": "ok"})
         self.assertEqual(fake_http.call_count, 1)
+        request_payload = json.loads(fake_http.call_args.args[0].data)
+        self.assertEqual(request_payload["reasoning"], {"effort": "low"})
+        self.assertEqual(request_payload["max_output_tokens"], 5000)
         self.assertEqual(budget.summary()["debited_usd"], 0.000115)
 
     def test_model_gateway_rejects_before_http_when_cap_exhausted(self):
@@ -131,6 +134,8 @@ class ModelBudgetTests(unittest.TestCase):
                          "response_incomplete_max_output_tokens")
         self.assertNotIn("secret", str(raised.exception))
         self.assertEqual(budget.summary()["attempted_calls"], 1)
+        # Provider-reported usage is settleable even for an incomplete result.
+        self.assertEqual(budget.summary()["debited_usd"], 0.004875)
 
 
 if __name__ == "__main__":
