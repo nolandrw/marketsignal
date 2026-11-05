@@ -110,7 +110,7 @@
       "surprise": "The initial review had seemed sufficient for an early decision until additional foundation questions arose.",
       "why_now": "The fictional council has postponed the upcoming hearing in response to a new review process.",
       "stakes": "A delay changes when worried shoreline residents may receive the barrier's promised protection.",
-      "original_value": "The angle ties a specific institutional decision to its stakes for residents rather than a betting-market number.",
+      "reader_value": "The angle ties a specific institutional decision to its stakes for residents rather than a betting-market number.",
       "supporting_claim_ids": ["development", "expectation", "stakeholders", "possible_cause"],
       "contrary_claim_ids": ["contrary"]
     },
@@ -122,7 +122,7 @@
       "surprise": "The council has delayed a hearing even though the study stops short of identifying a failed design.",
       "why_now": "The newly announced foundation review provides a concrete reason to examine the engineering concerns.",
       "stakes": "The fictional community could face another winter storm season with questions about its planned defenses.",
-      "original_value": "This investigative angle would require more technical evidence before asserting that a design problem exists.",
+      "reader_value": "This explanatory angle would require more technical evidence before asserting that a design problem exists.",
       "supporting_claim_ids": ["development", "expectation", "stakeholders", "possible_cause"],
       "contrary_claim_ids": ["contrary"]
     }

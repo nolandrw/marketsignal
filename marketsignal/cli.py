@@ -161,16 +161,15 @@ def newsroom_v3_demo() -> dict:
             source_ids = [doc["source_id"] for doc in payload["sources"]]
             return {
                 "requested_disposition": "go",
-                "scores": {"news_peg": 5, "consequences": 4,
-                           "editorial_potential": 4, "originality": 4,
-                           "research_feasibility": 4, "timeliness": 4},
+                "scores": {"market_signal_quality": 5, "real_world_significance": 4,
+                           "evidence_quality": 4, "timeliness": 4,
+                           "reader_usefulness": 4},
                 "score_rationales": {
-                    "news_peg": "Dated fictional engineering notice postpones the vote",
-                    "consequences": "Fictional coastal residents and fishing businesses are affected",
-                    "editorial_potential": "Unanticipated engineering delay conflicts with winter timetable",
-                    "originality": "Fixture index reports no competing published angle",
-                    "research_feasibility": "Multiple captured fictional documents and distinct origins",
+                    "market_signal_quality": "Fixture market has a dated movement baseline",
+                    "real_world_significance": "Fictional coastal residents and fishing businesses are affected",
+                    "evidence_quality": "Multiple captured fictional documents and distinct origins",
                     "timeliness": "Vote delay has just been documented in the fictional case",
+                    "reader_usefulness": "Explains the delay and implications for residents",
                 },
                 "news_peg_type": "documented_development",
                 "news_peg": "Fictional city postponed the flood barrier vote",
@@ -185,7 +184,7 @@ def newsroom_v3_demo() -> dict:
                             "central_question": "What caused the sudden engineering review, and who is exposed?",
                             "thesis_to_test": "Foundation concerns threaten a promised timetable",
                             "disconfirmation_test": "The review is routine and does not affect the approval timeline",
-                            "novel_contribution": "Document the newly exposed costs and engineering conflict",
+                            "reader_value": "Document the costs and engineering conflict clearly",
                             "source_ids": source_ids[:4]}],
                 "counterevidence": ["Independent engineering panel has not found the design unsafe"],
                 "research_questions": ["What precisely changed in the engineering assessment?",
@@ -395,6 +394,8 @@ def main(argv: list[str] | None = None) -> int:
                           help="Private shared budget ledger across all case runs")
     research.add_argument("--test-fixture-file", default=None,
                           help="Optional explicitly private, test-only subject; bypasses quantitative eligibility only")
+    research.add_argument("--include-article", action="store_true",
+                          help="Continue a verified dossier through unpublished article and editorial gates")
     estimate = commands.add_parser("model-budget-estimate",
                                    help="Zero-cost illustrative pilot API estimate")
     estimate.add_argument("--model", default="gpt-5-mini")
@@ -506,7 +507,8 @@ def main(argv: list[str] | None = None) -> int:
                                          research_policy=policy,
                                          model=ResponsesJSONModel(arguments.model, budget=budget),
                                          test_fixture=(load_test_fixture(arguments.test_fixture_file)
-                                                       if arguments.test_fixture_file else None))
+                                                       if arguments.test_fixture_file else None),
+                                         include_article=arguments.include_article)
         except (OSError, ValueError, KeyError, TypeError, ModelUnavailable,
                 RuntimeError, TimeoutError) as exc:
             print(json.dumps({"status": "research_hold", "reason": type(exc).__name__,

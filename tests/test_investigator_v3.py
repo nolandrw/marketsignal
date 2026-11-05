@@ -47,7 +47,7 @@ def dossier():
     return {
         "disposition": "ready_for_verifier", "reason": "Provisional sources support a real story",
         "departure_type": "original", "departure_reason": "",
-        "novelty_vs_coverage": "Original agency report and engineering review establish a previously unreported date.",
+        "prior_coverage_context": "Earlier reporting described the barrier, and current records document the vote delay.",
         "findings": [
             {"claim_id": "claim_new", "statement": "City records record a delay in the coastal barrier decision.",
              "source_ids": ["seed_record"], "certainty": "reported"},
@@ -70,7 +70,7 @@ def dossier():
                      "surprise": "A previously announced vote was moved",
                      "why_now": "The decision had been expected this week",
                      "stakes": "Residents and city planners face a delayed decision",
-                     "original_value": "Original document comparison clarifies the timeline",
+                     "reader_value": "Document comparison clarifies the timeline for readers",
                      "supporting_claim_ids": ["claim_new", "claim_context"],
                      "contrary_claim_ids": ["claim_counter"]}],
         "open_questions": ["Does the review change costs or the long-term plan?"],
@@ -136,8 +136,8 @@ class ScriptedModel:
                 result["scores"] = scores(PRELIMINARY_CRITERIA, partial=tuple(PRELIMINARY_CRITERIA))
             if self.scenario == "exactly_seventy":
                 result["scores"] = scores(PRELIMINARY_CRITERIA, partial=(
-                    "unanswered_question", "material_information_gain", "specific_development",
-                    "distinct_angle"), none=("impact_magnitude", "timely_relevance"))
+                    "reader_question", "reader_context_gain", "specific_development",
+                    "useful_story_angle"), none=("impact_magnitude", "timely_relevance"))
             if self.scenario == "missing_critical":
                 result["scores"] = scores(PRELIMINARY_CRITERIA, none=("discriminating_test",))
             if self.scenario == "unknown_ref":
@@ -178,7 +178,7 @@ class ScriptedModel:
             if self.scenario == "no_pitch":
                 result["pitches"] = []
             if self.scenario == "no_coverage":
-                result["novelty_vs_coverage"] = "Already known"
+                result["prior_coverage_context"] = "Already known"
             if self.scenario == "duplicate_origins":
                 result["findings"][0]["source_ids"] = ["seed_record"]
             if self.scenario == "no_deep_results":

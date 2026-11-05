@@ -65,7 +65,7 @@ class FictionalV3Model:
             return {
                 "disposition": "ready_for_verifier", "reason": "Fictional original record is traceable",
                 "departure_type": "original", "departure_reason": "",
-                "novelty_vs_coverage": "The newly updated meeting docket establishes a date not in prior coverage.",
+                "prior_coverage_context": "Earlier reports described the proposed barrier; the current docket clarifies its schedule.",
                 "findings": [
                     {"claim_id": "delay", "statement": "The city delayed a flood barrier vote for another foundation review.",
                      "source_ids": ["notice-2026"], "certainty": "reported"},
@@ -94,7 +94,7 @@ class FictionalV3Model:
                     "surprise": "The promised decision date has passed without replacement",
                     "why_now": "New official docket clarifies the revised schedule",
                     "stakes": "Fictional residents face a delayed infrastructure decision",
-                    "original_value": "Dated public-record comparison instead of odds analysis",
+                    "reader_value": "A concise, sourced timeline of the decision and its consequences",
                     "supporting_claim_ids": ["delay", "prior", "docket"],
                     "contrary_claim_ids": ["counter"],
                 }],

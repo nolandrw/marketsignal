@@ -118,7 +118,6 @@ class ModelBudgetTests(unittest.TestCase):
         self.assertNotIn("secret", str(raised.exception))
         self.assertEqual(budget.summary()["attempted_calls"], 1)
 
-
     def test_incomplete_model_response_reports_safe_token_limit_reason(self):
         budget = ModelBudget(self.db, "0.25")
         response = {"status": "incomplete", "incomplete_details": {
@@ -134,7 +133,8 @@ class ModelBudgetTests(unittest.TestCase):
                          "response_incomplete_max_output_tokens")
         self.assertNotIn("secret", str(raised.exception))
         self.assertEqual(budget.summary()["attempted_calls"], 1)
-        # Provider-reported usage is settleable even for an incomplete result.
+        # Incomplete responses can still carry authoritative usage numbers.
+        # They must be recorded rather than left as pessimistic reservations.
         self.assertEqual(budget.summary()["debited_usd"], 0.004875)
 
 

@@ -1,9 +1,9 @@
-# Topic Lead v2 — investigative-minded editorial assignment desk
+# Topic Lead v2 — market-led news selection desk
 
 ## Status and authority
 
 **Implemented:** fixed 100-point rubric, typed input and output packets,
-source-ID validation, dated-as-of guard, editorial-duplication gate,
+source-ID validation, dated-as-of guard, market-signal and evidence gates,
 GO/HOLD/SPIKE adjudication, reason codes, model-stage instructions,
 fictional workflow replay and unit tests.
 
@@ -39,11 +39,12 @@ currently connected to this model stage.
    preserve unknowns instead of manufacturing a consensus.
 3. Identify the news peg: a documented event, testable original analysis, or
    an emerging but still unconfirmed lead. Bare odds movements do not suffice.
-4. Search the newsroom index and external coverage. A subject may have repeat
-   coverage if the *angle* offers original reporting. The current runtime
-   requires an externally supplied index-check result.
+4. Check the newsroom index and external coverage for attribution, context,
+   conflicting accounts and possible duplication of our own previously
+   published article. Reporting already published elsewhere is an advantage
+   when it provides credible evidence, **not a reason to reject a story**.
 5. Develop up to three specific newspaper pitches with central reader
-   question, hypothesis to investigate, falsification test, original value,
+   question, hypothesis to investigate, falsification test, reader value,
    and source references. Seek contrary evidence.
 6. Grade the 100-point rubric and independently pass all mandatory gates.
 7. Return an auditable GO, HOLD or SPIKE packet to the newsroom controller.
@@ -60,12 +61,11 @@ Each dimension is rated 0–5, then multiplied by its fixed weight:
 
 | Dimension | Multiplier | Max | Specific intent |
 |---|---:|---:|---|
-| `news_peg` | 4 | 20 | Specific development or testable original insight |
-| `consequences` | 4 | 20 | Material impacts on identifiable people or systems |
-| `editorial_potential` | 4 | 20 | Compelling question or conflict worth investigating |
-| `originality` | 3 | 15 | Distinct value beyond existing journalism |
-| `research_feasibility` | 3 | 15 | Credible path to confirm or disprove the proposition |
-| `timeliness` | 2 | 10 | Why the story warrants attention now |
+| `market_signal_quality` | 5 | 25 | Historical market movement or another defensible quantitative signal, with caveats |
+| `real_world_significance` | 5 | 25 | Material impacts on identifiable people or systems |
+| `evidence_quality` | 4 | 20 | Credible path to establish or disprove the relevant facts |
+| `timeliness` | 3 | 15 | Why the story warrants attention now |
+| `reader_usefulness` | 3 | 15 | Clear selection, synthesis, context and explanation for readers |
 
 Anchors: 0 absent, 1 weak/speculative, 2 promising but uncertain,
 3 specific plausible basis, 4 strong, 5 exceptional. The model provides an
@@ -78,7 +78,7 @@ triage estimates, not empirical probabilities or independently scored ratings.
 |---|---|
 | GO | ≥65/100 and every mandatory gate passes |
 | HOLD | 45–64; or plausible/high-consequence story missing a required gate |
-| SPIKE | Below 45 absent the high-consequence exception, or all angles already covered |
+| SPIKE | Below 45 absent the high-consequence exception, or story lacks substantive reader value |
 
 All model-requested HOLD and SPIKE decisions are respected; the controller
 never upgrades a self-requested rejection to GO. Mandatory GO gates include:
@@ -86,20 +86,21 @@ never upgrades a self-requested rejection to GO. Mandatory GO gates include:
 - Quantitative eligibility and interpretable market resolution rules.
 - Documented news peg or testable original analysis, **not** unexplained
   market chatter. An emerging unverified signal is held.
-- Identifiable stakes, at least one distinct provisional angle and a concrete
+- Identifiable stakes, at least one informative provisional angle and a concrete
   investigation assignment.
-- A checked prior-coverage index. Confirmed duplication of every proposed
-  angle spikes the story, even with a high score.
-- At least two distinct credible source origins with actual captured excerpts;
-  alternatively an authoritative primary document and an independently
-  testable proposition as declared by the trusted intake system.
+- Prior coverage is recorded when available, but an uncompleted review is
+  an Investigator research ticket, not a Topic Lead veto. External coverage
+  never counts against an angle's eligibility. Repeating our own unchanged
+  publication is a separate downstream deduplication decision.
+- At least one credible original source seed with a real captured excerpt;
+  further corroboration remains the Investigator and Verifier's job.
 - Only source IDs actually in the input evidence packet can be cited. No future
   source publication date may occur in an as-of replay.
 
 HOLDs require a specific revisit condition. Cases that later gain evidence
 must return to topic review before investigation. A high score cannot overrule
 these gates. None of these checks proves external facts or validates editorial
-novelty: such decisions require further editorial review.
+factual quality or reader value: such decisions require further editorial review.
 
 ## Handoff contract
 
@@ -115,12 +116,12 @@ The model returns:
 - `prior_expectation` and source IDs, `public_stakes` and source IDs;
 - `coverage_analysis` and up to three `angles`;
 - each angle's working headline, central question, thesis to test,
-  **disconfirmation test**, original contribution and source IDs;
+  **disconfirmation test**, reader value and source IDs;
 - `counterevidence`, `research_questions`, `uncertainties`, `sensitivity_flags`;
 - `revisit_condition` for holds.
 
 The application validates fields, independent origins, source-ID membership,
-researchability, pre-existing coverage and thresholds. The returned
+researchability, source integrity and thresholds. The returned
 `TopicLeadAssessment` includes reason codes and `publication_enabled: false`.
 The chief editor still owns final article selection and headline.
 
@@ -154,8 +155,8 @@ this is a *manually supplied input*, not an automated reporting newsroom.
 
 ## Calibration and oversight
 
-Track GO→worthwhile investigation, GO→publishable story, research cost per
-successful assignment, duplicate rate and human-rated handoff quality.
+Track GO→worthwhile investigation, GO→publishable story, reader-value ratings,
+research cost per successful assignment, internal duplicate rate and human-rated handoff quality.
 **Sample HOLD and SPIKE cases** for blind editorial reassessment, otherwise
 false negatives are invisible. Segment metrics by category and lead source.
 The librarian archives decisions and proposals. Oversight may recommend

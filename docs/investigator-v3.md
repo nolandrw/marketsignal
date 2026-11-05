@@ -47,9 +47,9 @@ actual newsroom controller **does not yet invoke this bridge**.
 | Phase | Intended budget | Required outcome | Stop conditions |
 |---|---|---|---|
 | Intake | Prior Topic Lead GO ≥65, source manifest, disclosed coverage status | Accept a bounded question and authentic evidence seed | No GO, missing/wrong captures or invalid angle → HOLD |
-| Preliminary | About 2–4 min; 1–3 queries, max 4 captures each | Score *potential* information gain; name rival explanation and discriminating test | Model HOLD/SPIKE respected; score below 70 or any critical criterion `none` → HOLD |
+| Preliminary | About 2–4 min; 1–3 queries, max 4 captures each | Score *potential reader understanding*; name rival explanation and discriminating test | Model HOLD/SPIKE respected; score below 70 or any critical criterion `none` → HOLD |
 | Deep reporting | About 10–15 min; 1–5 further queries, max 4 captures each | Compare original reporting, chronology, coverage and contradictory evidence | Budget failure, inaccessible records or no new deep evidence → HOLD |
-| Dossier | Up to 30 distinct captures total and 8 search calls | Source-linked claims, dates, rival/null theories, novelty delta, 0–3 pitches | Malformed/unsourced dossier, future dates, inadequate origin diversity, unreviewed new case, completed score below 75 → HOLD |
+| Dossier | Up to 30 distinct captures total and 8 search calls | Source-linked claims, dates, rival/null theories, prior coverage context, 0–3 pitches | Malformed/unsourced dossier, future dates, inadequate origin diversity, unreviewed new case, completed score below 75 → HOLD |
 | Verification handoff | Private only | `ready_for_verifier` **provisionally**, or explained HOLD/SPIKE | Never auto-publish; independent editorial and fact verification remain necessary |
 
 **Implemented limits are query/capture counts**, not actual stopwatch or
@@ -60,8 +60,8 @@ budgets and trustworthy provider instrumentation.
 The primary **preliminary hard gates** after a model requests deep research:
 
 - Overall provisional score ≥70/100.
-- `unanswered_question`, `credible_evidence_path`,
-  `material_information_gain`, `specific_development`,
+- `reader_question`, `credible_evidence_path`,
+  `reader_context_gain`, `specific_development`,
   `discriminating_test` and `affected_parties` cannot be `none`.
 - At least one captured non-comment source must exist, along with a concrete
   discriminating test of at least 25 characters and 1–5 bounded next queries.
@@ -70,9 +70,9 @@ The primary **preliminary hard gates** after a model requests deep research:
 The **completed hard gates** include: all 15 criterion statuses and evidence
 references; only known source/claim IDs; material findings citing non-comment
 sources; dated non-future chronology; hypotheses linked to claims; explicit
-coverage delta and departure reason; 0–3 pitches. A verifier-ready dossier
+prior-coverage context and departure reason; 0–3 pitches. A verifier-ready dossier
 requires ≥3 findings, ≥2 dated timeline events, ≥2 distinct source origins,
-≥1 evidence-linked newspaper pitch, and completed score ≥75/100. Novelty or
+≥1 evidence-linked newspaper pitch, and completed score ≥75/100. Originality or
 accuracy is **not** established by passing these structural conditions.
 
 ## Rubrics: precisely defined scoring dimensions
@@ -85,12 +85,12 @@ rationale and registered source/artifact identifiers. A high total cannot
 override a mandatory gate. These are *model self-scores*, not an independent
 editorial grade, and should later be calibrated on blind human reviews.
 
-### Preliminary: information *potential*, not article readiness
+### Preliminary: reader-understanding *potential*, not article readiness
 
 | Dimension | Subcriteria and maximum points | What merits credit |
 |---|---|---|
-| Potential for new information · 30 | Unanswered question 10; credible evidence path 10; material information gain 10 | A specific unresolved question, an accessible credible investigative path and an answer that could materially change understanding versus prior coverage |
-| Story potential · 25 | Specific development 10; distinct angle 10; reader premise 5 | An independently dated real-world development, identifiable difference from published stories and an honest audience-facing question |
+| Potential reader context · 30 | Reader question 10; credible evidence path 10; reader context gain 10 | A useful question, credible research path and an opportunity to synthesize existing or new information clearly |
+| Story potential · 25 | Specific development 10; useful story angle 10; reader premise 5 | An independently dated real-world development and an honest, helpful audience-facing explanation, regardless of prior outlets' coverage |
 | Testability · 20 | Alternative explanation 8; discriminating test 8; abandonment condition 4 | A serious rival/null account, a concrete differentiating check and an observable reason to abandon the thesis |
 | Significance · 15 | Affected parties 5; impact magnitude 5; timely relevance 5 | Specific exposed people/institutions, proportionate magnitude and why the question matters *now* without relying on betting-market excitement |
 | Feasibility · 10 | Source access 4; bounded scope 3; ethical access 3 | A lawful reachable record/source, a test achievable within budget and explicit privacy/licensing/allegation safeguards |
@@ -100,7 +100,7 @@ editorial grade, and should later be calibrated on blind human reviews.
 | Dimension | Subcriteria and maximum points | What merits credit |
 |---|---|---|
 | Evidence integrity · 25 | Claim provenance 10; timeline integrity 8; independent origins 7 | Traceable attributed evidence, correctly dated sequences and meaningful source independence |
-| Original contribution · 25 | Meaningful finding **or negative result** 10; coverage delta 10; reproducible analysis 5 | An actual supported addition (including a disproved hypothesis), precise comparison with existing journalism and retraceable methods |
+| Evidence synthesis · 25 | Supported findings **or negative result** 10; coverage synthesis 10; reproducible analysis 5 | Credible account of the development, accurate context and upstream attribution, and retraceable methods; exclusive facts are not required |
 | Disconfirmation · 20 | Alternative theories 6; actual disconfirmation 10; residual uncertainty 4 | Real plausible rival accounts, completed counterchecks and clearly preserved uncertainties; merely suggesting a test does not qualify |
 | Reader/editorial value · 20 | Concrete consequences 8; defensible decision 8; contextual timeliness 4 | Specific stakes, an evidence-driven publish/HOLD/SPIKE recommendation, and factual context for why now |
 | Efficiency and documentation · 10 | Source log 4; resource proportionality 3; actionable tickets 3 | Query/capture logs and dead ends, proportionate effort for information gained and outstanding checks with sources plus revisit triggers |
@@ -118,7 +118,7 @@ source manifest with source identifiers, timestamps, origin, kind and excerpt
 SHA-256, the bounded queries and per-query trace, and `publication_enabled:
 false`. Completed dossiers contain findings with claim IDs and source IDs,
 timestamped chronology, alternative hypotheses with pro/con claim links,
-novelty versus existing coverage, open questions, a departure classification
+prior coverage for attribution and context, open questions, a departure classification
 and 0–3 pitches. Source content is treated as untrusted input; claims are
 **not** cryptographically or semantically certified by hashes or IDs.
 

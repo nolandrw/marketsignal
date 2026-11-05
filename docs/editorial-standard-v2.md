@@ -175,9 +175,9 @@ Actual model-written prose and independent reader ratings are not yet active.
 | Accurate account of verified development and chronology | 15 |
 | Rich, representative prior context and causal uncertainty | 20 |
 | Authentic, diverse voices and accurate sourcing | 15 |
-| Societal implications and original insight | 15 |
+| Societal implications and useful context | 15 |
 | Fair counterarguments, proportion and careful uncertainty | 10 |
-| Narrative flow, originality and appropriate length | 10 |
+| Narrative flow, clear synthesis and appropriate length | 10 |
 | **Total** | **100** |
 
 The process rubric can be exercised with synthetic unit tests. The article

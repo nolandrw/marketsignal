@@ -148,10 +148,10 @@ class NewsroomControlTests(unittest.TestCase):
             ResearchTicket("id", "", ("find file",))
 
     def test_topic_rubric_requires_source(self):
-        rubric = TopicRubric(5, 5, 5, 5, 5, 5)
+        rubric = TopicRubric(5, 5, 5, 5, 5)
         self.assertEqual(rubric.score, 100)
         self.assertFalse(rubric.eligible)
-        self.assertTrue(TopicRubric(5, 5, 5, 5, 5, 5, ("source-1",)).eligible)
+        self.assertTrue(TopicRubric(5, 5, 5, 5, 5, ("source-1",)).eligible)
 
     def test_topic_review_requires_explicit_go_not_just_self_assessed_score(self):
         story = new_story()

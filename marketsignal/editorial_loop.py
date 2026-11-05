@@ -171,7 +171,7 @@ def pitch_issues(pitch: StoryPitch, case: dict) -> tuple[str, ...]:
     if not re.fullmatch(r"[a-z][a-z0-9_-]{2,60}", pitch.pitch_id):
         issues.append("invalid_pitch_id")
     if any(not 22 <= len(getattr(pitch, key).strip()) <= 700 for key in (
-            "thesis", "conflict", "surprise", "why_now", "stakes", "original_value")):
+            "thesis", "conflict", "surprise", "why_now", "stakes", "reader_value")):
         issues.append("incomplete_narrative")
     ids = set(pitch.supporting_claim_ids) | set(pitch.contrary_claim_ids)
     if not ids <= claim_map.keys() or not pitch.contrary_claim_ids:
@@ -263,7 +263,7 @@ class CaseReplayModel:
             return {"decision": "commission", **self.case["editorial_selection"],
                     "scores": {"central_conflict": 18, "public_significance": 18,
                                "surprise_or_reversal": 13, "specificity": 13,
-                               "evidence_strength": 12, "original_value": 4,
+                               "evidence_strength": 12, "reader_value": 4,
                                "narrative_depth": 4}, "requested_work": []}
         if stage == "writer":
             return {"headline": self.case["article"]["headline"],
@@ -275,14 +275,14 @@ class CaseReplayModel:
                     "article_issues": []}
         if stage == "quality_reviewer":
             # Recorded baseline estimates, not an actual synthetic audience or
-            # independent assessment. The derivative story is held for value.
+            # independent assessment. The story is held for evidence gaps.
             return {"verdict": "revise",
                     "scores": {"central_conflict": 17, "public_significance": 17,
                                "surprise_or_reversal": 12, "specificity": 12,
-                               "evidence_strength": 10, "original_value": 3,
+                               "evidence_strength": 10, "reader_value": 3,
                                "narrative_depth": 4},
-                    "issues": ["No independently reported insight beyond existing coverage",
-                               "Short excerpts cannot substantiate every nuance of the causal framing"],
+                    "issues": ["Short excerpts cannot substantiate every nuance of the causal framing",
+                               "Insufficient detail to distinguish established events from rival explanations"],
                     "strengths": ["Concrete political conflict and historical stakes"]}
         raise ValueError("Unknown replay stage")
 

@@ -16,9 +16,9 @@ from urllib.parse import urlsplit
 
 
 PRELIMINARY_CRITERIA = {
-    "unanswered_question": 10, "credible_evidence_path": 10,
-    "material_information_gain": 10, "specific_development": 10,
-    "distinct_angle": 10, "reader_premise": 5,
+    "reader_question": 10, "credible_evidence_path": 10,
+    "reader_context_gain": 10, "specific_development": 10,
+    "useful_story_angle": 10, "reader_premise": 5,
     "alternative_explanation": 8, "discriminating_test": 8,
     "abandonment_condition": 4, "affected_parties": 5,
     "impact_magnitude": 5, "timely_relevance": 5,
@@ -26,7 +26,7 @@ PRELIMINARY_CRITERIA = {
 }
 COMPLETED_CRITERIA = {
     "claim_provenance": 10, "timeline_integrity": 8, "independent_origins": 7,
-    "meaningful_finding_or_negative_result": 10, "coverage_delta": 10,
+    "supported_findings_or_negative_result": 10, "coverage_synthesis": 10,
     "reproducible_analysis": 5, "alternative_theories": 6,
     "actual_disconfirmation": 10, "residual_uncertainty": 4,
     "concrete_consequences": 8, "defensible_editorial_decision": 8,
@@ -37,11 +37,11 @@ assert sum(PRELIMINARY_CRITERIA.values()) == 100
 assert sum(COMPLETED_CRITERIA.values()) == 100
 
 PRELIMINARY_GUIDANCE = {
-    "unanswered_question": "A specific material question not resolved by existing reporting; cite the coverage comparison.",
+    "reader_question": "A specific material question readers would benefit from seeing answered, even if another outlet has reported it.",
     "credible_evidence_path": "A named public record, dataset or reputable independent source likely to answer the question.",
-    "material_information_gain": "A plausible answer would substantively change understanding; not a new phrasing of known facts.",
+    "reader_context_gain": "Research could yield a useful, concise explanation or synthesis of supported facts and uncertainties.",
     "specific_development": "A dated real-world development or testable original analysis, independent of trading movement.",
-    "distinct_angle": "A concrete contribution different from previously reported angles, with coverage comparison.",
+    "useful_story_angle": "A clear, informative treatment of the development, whether or not prior outlets covered the same angle.",
     "reader_premise": "A specific honest question/headline about the world, not market mechanics or unexplained uncertainty.",
     "alternative_explanation": "A realistic rival or null explanation, without manufacturing false equivalence.",
     "discriminating_test": "An observable document/data check capable of distinguishing explanations.",
@@ -57,8 +57,8 @@ COMPLETED_GUIDANCE = {
     "claim_provenance": "Each material conclusion points to captured original or attributable evidence; check entailment.",
     "timeline_integrity": "Event ordering and prior expectations have dated source support, including no future leakage.",
     "independent_origins": "Important findings use genuinely independent origins where appropriate, not copied coverage.",
-    "meaningful_finding_or_negative_result": "New supported insight OR a well-supported disproof of the starting story thesis.",
-    "coverage_delta": "Names the exact incremental finding versus previously available reporting.",
+    "supported_findings_or_negative_result": "Evidence-supported account of what happened, or a well-supported disproof of the initial story thesis; exclusivity not required.",
+    "coverage_synthesis": "Accurately relates existing journalism, identifies upstream original reporting, and shows what readers need to know now.",
     "reproducible_analysis": "A reviewer can retrace comparison, calculations and source references.",
     "alternative_theories": "Credible rival/null accounts are articulated in proportion to their evidence.",
     "actual_disconfirmation": "Specific evidence was inspected to test/reject theories; proposed checks alone are insufficient.",
@@ -88,7 +88,7 @@ def rubric_contract(stage: str) -> dict:
         weights, definitions = COMPLETED_CRITERIA, COMPLETED_GUIDANCE
     else:
         raise ValueError("Unknown Investigator rubric stage")
-    return {"rubric_version": "investigator-v3.0", "stage": stage,
+    return {"rubric_version": "investigator-v3.1-curation", "stage": stage,
             "anchor_policy": SCORING_ANCHORS,
             "criteria": {key: {"maximum": value, "full_credit_definition": definitions[key]}
                          for key, value in weights.items()},
@@ -199,7 +199,7 @@ def assignment_from_topic_lead(context, assessment, captures: tuple[ResearchCapt
                 source.publisher != lead.publisher or
                 source.source_kind not in source_kind_map.get(lead.source_type, set())):
             raise ValueError("Topic Lead metadata differs from captured evidence")
-    coverage = (("COVERAGE UNREVIEWED: investigate prior reporting before claiming novelty.\n"
+    coverage = (("COVERAGE UNREVIEWED: investigate prior reporting for accurate attribution and context.\n"
                  if not context.coverage_checked else "") +
                 assessment.coverage_analysis + "\n" + "\n".join(
         f"{item.story_id}: {item.title} ({item.overlap})"
@@ -312,8 +312,8 @@ def _validate_dossier(raw: object, sources: tuple[ResearchCapture, ...],
         pitches = raw["pitches"]
         open_questions = raw["open_questions"]
         departure = raw["departure_reason"]
-        if not isinstance(raw["novelty_vs_coverage"], str) or len(raw["novelty_vs_coverage"].strip()) < 20:
-            issues.append("missing_coverage_differentiation")
+        if not isinstance(raw["prior_coverage_context"], str) or len(raw["prior_coverage_context"].strip()) < 20:
+            issues.append("missing_prior_coverage_context")
         if (not isinstance(findings, list) or len(findings) > 30 or
                 not isinstance(timeline, list) or len(timeline) > 25 or
                 not isinstance(hypotheses, list) or len(hypotheses) > 5 or
@@ -400,7 +400,7 @@ class InvestigatorV3:
         def finish(disposition: str, reason: str, preliminary: dict | None = None,
                    completed: dict | None = None, dossier: dict | None = None) -> dict:
             return {"case_id": assignment.case_id, "disposition": disposition,
-                    "rubric_version": "investigator-v3.0",
+                    "rubric_version": "investigator-v3.1-curation",
                     "reason": reason, "preliminary_rubric": preliminary,
                     "completed_rubric": completed, "dossier": dossier,
                     "source_ids": sorted(sources), "research_queries": queries,
@@ -484,7 +484,7 @@ class InvestigatorV3:
             if prelim["total"] < DEEP_THRESHOLD:
                 return finish("hold", "below_preliminary_research_threshold", prelim)
             if any(prelim["criteria"][key]["grade"] == "none" for key in (
-                "unanswered_question", "credible_evidence_path", "material_information_gain",
+                "reader_question", "credible_evidence_path", "reader_context_gain",
                 "specific_development", "discriminating_test", "affected_parties"
             )):
                 return finish("hold", "missing_critical_preliminary_criterion", prelim)

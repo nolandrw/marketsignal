@@ -20,6 +20,7 @@ from .source_capture import HostPermission, SourceCaptureGateway
 from .topic_lead import TopicLeadAgent
 from .oversight import ProcessFailureEvent, ProcessOverseer
 from .evaluation_harness import ResearchTestFixture, evaluate_topic_fixture
+from .article_continuation import continue_verified_dossier
 
 
 def load_seed_captures(path: str | Path) -> tuple[ResearchCapture, ...]:
@@ -92,7 +93,8 @@ def configure_research_sources(policy: dict) -> MultiSourceResearchProvider:
 
 def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
                         *, angle_id: str, research_policy: dict, model,
-                        test_fixture: ResearchTestFixture | None = None) -> dict:
+                        test_fixture: ResearchTestFixture | None = None,
+                        include_article: bool = False) -> dict:
     """Live-readonly source collection + model stages only when caller opts in."""
     if angle_id == "auto:first" and test_fixture is None:
         raise ValueError("Automatic angle choice is permitted only in evaluation fixtures")
@@ -146,16 +148,31 @@ def run_research_shadow(context, captures: tuple[ResearchCapture, ...],
             log("dossier_verifier", issue.reason_code)
         if not verification.issues:
             log("dossier_verifier", "provisionally_verified")
+    article_review = None
+    if include_article and verification and verification.status == "provisionally_verified":
+        article_review = continue_verified_dossier(
+            case_id=context.story_id, as_of=context.as_of,
+            investigation=investigation, captures=all_captures,
+            verification=verification, market_question=context.market_question, model=model)
+        for stage in article_review["stage_trace"]:
+            log("article_" + stage["stage"], stage["status"])
+        log("article_release", "held_without_human_factcheck_or_owner_approval")
     return annotated({"case_id": context.story_id, "topic_lead": {
                 "disposition": topic.disposition, "score": topic.score,
                 "selected_angle_id": selected_angle_id},
             "investigator": investigation,
             "handoff_contract": contract.to_dict(),
             "evidence_verifier": verification.to_dict() if verification else None,
-            "status": ("held_pending_coverage_review"
+            "article_review": article_review,
+            "article": article_review["article"] if article_review else None,
+            "status": ((article_review["status"] + "_pending_coverage_review")
+                       if article_review and not context.coverage_checked else
+                       article_review["status"] if article_review else
+                       "held_pending_coverage_review"
                        if not context.coverage_checked else
                        "provisionally_verified_for_editorial_review"
                        if verification and verification.status == "provisionally_verified"
                        else "held_pending_research_or_review"),
+            "coverage_review_pending": not context.coverage_checked,
             "publication_enabled": False, "human_factcheck_attested": False,
             "evaluation_only": bool(test_fixture)})

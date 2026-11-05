@@ -199,6 +199,6 @@ def render_shadow(case: dict) -> str:
                    "- **Competing angles assessed:** " + "; ".join(
                        p.working_headline for p in pitches.values()
                        if p.pitch_id != selection.selected_pitch_id),
-                   "- **Quality caveat:** structural checks passed; narrative merit, originality "
+                   "- **Quality caveat:** structural checks passed; narrative merit, reader usefulness "
                    "and semantic accuracy are not independently scored or certified.", ""])
     return "\n".join(result)
