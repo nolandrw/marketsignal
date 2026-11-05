@@ -7,7 +7,7 @@ fetched and can only be considered unverified publication leads.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -102,10 +102,12 @@ class RSSNewsSearch:
                 until - since > 31 * 86400):
             raise ValueError("Invalid RSS discovery request bounds")
 
-        # Exclude the UTC observation day to avoid top search results posted
-        # after the market snapshot masquerading as a prior explanation.
+        # Include the UTC observation day so a recent-coverage window can
+        # measure same-day chatter. The exact timestamp filter in _collect
+        # still excludes posts published after the archived market snapshot.
         after = datetime.fromtimestamp(since, timezone.utc).strftime("%Y-%m-%d")
-        before = datetime.fromtimestamp(until, timezone.utc).strftime("%Y-%m-%d")
+        before = (datetime.fromtimestamp(until, timezone.utc) +
+                  timedelta(days=1)).strftime("%Y-%m-%d")
         google_params = {"q": f"{query} after:{after} before:{before}",
                          "hl": "en-US", "gl": "US", "ceid": "US:en"}
         try:

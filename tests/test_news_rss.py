@@ -43,7 +43,7 @@ class RSSNewsTests(unittest.TestCase):
         self.assertEqual(leads[0].platform, "google_news_rss")
         self.assertEqual(leads[0].posted_at, OBSERVED - 3600)
         self.assertEqual(len(fake.calls), 1)
-        self.assertIn("before:2026-11-04", fake.calls[0][1]["q"])
+        self.assertIn("before:2026-11-05", fake.calls[0][1]["q"])
 
     def test_fallback_to_bing_when_google_provider_blocked(self):
         fake = FakeRSS(google=SourceError("RSS provider HTTP 429"), bing=rss())

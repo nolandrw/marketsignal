@@ -26,6 +26,11 @@ MIN_LIQUIDITY_USD = 25_000
 MAX_MODEL_CALLS_PER_CASE = 6
 MIN_EDITOR_SCORE = 50
 SOURCE_MARKET = "market_snapshot"
+MAX_ATTENTION_PROBES = 8
+MAX_ATTENTION_STORIES = 3
+ATTENTION_WINDOW_SECONDS = 2 * 86400
+MIN_ATTENTION_HEADLINES = 6
+MIN_ATTENTION_PUBLISHERS = 4
 
 
 @dataclass(frozen=True)
@@ -35,6 +40,8 @@ class Movement:
     observed_at: int
     previous_price: float
     delta_pp: float
+    trigger: str = "price_movement"
+    coverage_attention: dict | None = None
 
     def to_dict(self) -> dict:
         return {"market_id": self.market.market_id,
@@ -48,6 +55,8 @@ class Movement:
                 "prior_yes_price": self.previous_price,
                 "current_yes_price": self.market.yes_price,
                 "change_pp": self.delta_pp,
+                "trigger": self.trigger,
+                "coverage_attention": self.coverage_attention,
                 "volume_24h_usd": self.market.volume_24h,
                 "liquidity_usd": self.market.liquidity,
                 "market_prices_are_not_event_probabilities": True,
@@ -98,6 +107,121 @@ def select_movers(previous_file: str | Path, latest_file: str | Path,
 
 class CoverageSearch(Protocol):
     def search(self, query: str, since: int, until: int, limit: int = 8): ...
+
+
+def select_quiet_candidates(previous_file: str | Path, latest_file: str | Path,
+                            *, excluded_events: set[tuple[str, str]] | None = None,
+                            maximum: int = MAX_ATTENTION_PROBES,
+                            threshold_pp: float = MIN_MOVEMENT_PP) -> tuple[Movement, ...]:
+    """Select liquid, nearly unchanged events for a bounded *news* attention probe.
+
+    The absence of a movement is observed, not interpreted as a probability
+    judgment. One representative contract per event avoids redundant searches.
+    """
+    if not 1 <= maximum <= MAX_ATTENTION_PROBES or not 1 <= threshold_pp <= 25:
+        raise ValueError("Invalid quiet-market probe bounds")
+    old = json.loads(Path(previous_file).read_text(encoding="utf-8"))
+    new = json.loads(Path(latest_file).read_text(encoding="utf-8"))
+    if (old.get("schema_version") != 1 or new.get("schema_version") != 1 or
+            not isinstance(old.get("markets"), list) or
+            not isinstance(new.get("markets"), list) or
+            not isinstance(old.get("observed_at"), int) or
+            not isinstance(new.get("observed_at"), int) or
+            not 0 < new["observed_at"] - old["observed_at"] <= 48 * 3600):
+        raise ValueError("Attention probe needs consecutive dated real archives")
+    older = {m.market_id: m for m in (Market(**row) for row in old["markets"])}
+    if len(older) != len(old["markets"]):
+        raise ValueError("Duplicate historical market identity")
+    excluded = excluded_events or set()
+    candidates: dict[tuple[str, str], Movement] = {}
+    seen: set[str] = set()
+    for row in new["markets"]:
+        market = Market(**row)
+        if market.market_id in seen:
+            raise ValueError("Duplicate latest market identity")
+        seen.add(market.market_id)
+        prior = older.get(market.market_id)
+        event = (market.venue, market.event_id)
+        if (prior is None or event in excluded or
+                (prior.venue, prior.yes_token_id, prior.question) !=
+                (market.venue, market.yes_token_id, market.question) or
+                market.volume_24h < MIN_VOLUME_USD or
+                market.liquidity < MIN_LIQUIDITY_USD or
+                not all(math.isfinite(p) and 0 <= p <= 1 for p in
+                        (market.yes_price, prior.yes_price))):
+            continue
+        delta = round((market.yes_price - prior.yes_price) * 100, 3)
+        if abs(delta) >= threshold_pp:
+            continue
+        movement = Movement(market, old["observed_at"], new["observed_at"],
+                            prior.yes_price, delta)
+        if event not in candidates or market.volume_24h > candidates[event].market.volume_24h:
+            candidates[event] = movement
+    ranked = sorted(candidates.values(), key=lambda m: (m.market.volume_24h,
+                                                         m.market.liquidity), reverse=True)
+    return tuple(ranked[:maximum])
+
+
+def _attention_query(market: Market) -> str:
+    """A deterministic, bounded subject query; no speculative LLM pre-scout."""
+    subject = market.event_title.replace("...", " ").replace("___", " ")
+    subject = re.sub(r"[?!.]+", " ", subject)
+    subject = re.sub(r"\s+", " ", subject).strip()
+    return _short_query(subject)
+
+
+def probe_quiet_attention(candidates: tuple[Movement, ...], search: CoverageSearch,
+                          *, maximum: int = MAX_ATTENTION_STORIES) -> tuple[Movement, ...]:
+    """Look for broad *sampled* coverage around unchanged markets.
+
+    The news index returns ranked, capped headline samples, not a full article
+    count. Compare adjacent 48h windows and require publisher diversity; never
+    characterize these counts as exhaustive media volume.
+    """
+    if not 0 <= maximum <= MAX_ATTENTION_STORIES:
+        raise ValueError("Invalid attention story cap")
+    selected = []
+    for candidate in candidates[:MAX_ATTENTION_PROBES]:
+        if len(selected) >= maximum:
+            break
+        query = _attention_query(candidate.market)
+        if not query:
+            continue
+        end = candidate.observed_at
+        try:
+            recent = search.search(query, end - ATTENTION_WINDOW_SECONDS, end, limit=12)
+            previous = search.search(query, end - 2 * ATTENTION_WINDOW_SECONDS,
+                                     end - ATTENTION_WINDOW_SECONDS, limit=12)
+        except (OSError, RuntimeError, ValueError, TypeError, AttributeError):
+            continue  # A failed probe is not evidence of quiet coverage.
+        recent_valid = {lead.url: lead for lead in recent
+                        if _valid_lead(lead, end) and
+                        end - ATTENTION_WINDOW_SECONDS <= lead.posted_at <= end}
+        previous_valid = {lead.url: lead for lead in previous
+                          if _valid_lead(lead, end) and
+                          end - 2 * ATTENTION_WINDOW_SECONDS <= lead.posted_at <
+                          end - ATTENTION_WINDOW_SECONDS}
+        publishers = {lead.author_key.casefold().strip() for lead in recent_valid.values()}
+        # Multiple RSS links to an identical syndicated title should not
+        # manufacture an impression of independent editorial attention.
+        titles = {re.sub(r"[^a-z0-9]+", " ", lead.title.rsplit(" - ", 1)[0].casefold()).strip()
+                  for lead in recent_valid.values()}
+        if (len(recent_valid) < MIN_ATTENTION_HEADLINES or
+                len(publishers) < MIN_ATTENTION_PUBLISHERS or len(titles) < 4 or
+                not (len(recent_valid) >= len(previous_valid) + 3 or
+                     len(recent_valid) >= 9)):
+            continue
+        metrics = {"sampled_recent_headlines": len(recent_valid),
+                   "sampled_prior_headlines": len(previous_valid),
+                   "distinct_recent_publishers": len(publishers),
+                   "distinct_recent_titles": len(titles),
+                   "window_hours": 48,
+                   "sampled_not_total_media_volume": True,
+                   "query": query}
+        selected.append(Movement(candidate.market, candidate.baseline_at,
+                                 candidate.observed_at, candidate.previous_price,
+                                 candidate.delta_pp, "coverage_without_price_movement", metrics))
+    return tuple(selected)
 
 
 def _short_query(value: str) -> str:
@@ -158,6 +282,12 @@ def _manuscript_issues(raw: dict, headline: str, available: set[str]) -> list[st
 def run_brief(movement: Movement, model, search: CoverageSearch) -> dict:
     """Bounded scout -> discovery -> editor -> writer -> verifier, always private."""
     trace: list[dict] = []
+    if movement.trigger == "coverage_without_price_movement":
+        trace.append({"stage": "quantitative_attention_gate", "status": "passed",
+                      "sampled_recent_headlines": movement.coverage_attention[
+                          "sampled_recent_headlines"],
+                      "distinct_recent_publishers": movement.coverage_attention[
+                          "distinct_recent_publishers"]})
     article = None
     calls = 0
     context = movement.to_dict()
@@ -165,6 +295,14 @@ def run_brief(movement: Movement, model, search: CoverageSearch) -> dict:
         "Coverage leads are published HEADLINE METADATA, not captured full articles. "
         "Attribute them to named publishers; do not assume or assert an event is verified. "
         "Market movements are observed prices, not proof of a real-world cause.")
+    if movement.trigger == "coverage_without_price_movement":
+        context["source_caution"] += (
+            " This case was triggered by high or increasing publisher diversity in "
+            "a CAPPED NEWS-INDEX SAMPLE, NOT an observed market move. The contract "
+            "price changed less than one percentage point; do not describe a surge "
+            "in betting interest, a statistically proven news spike, or trader "
+            "indifference. A worthwhile contrast may be public coverage versus "
+            "stable quoted pricing, if the news headlines really bear on the contract.")
 
     def result(status: str, reason: str, **more) -> dict:
         return {"status": status, "reason": reason, "market": movement.to_dict(),
@@ -269,3 +407,103 @@ def run_brief(movement: Movement, model, search: CoverageSearch) -> dict:
                       "error_class": type(exc).__name__,
                       "model_error_code": getattr(exc, "diagnostic_code", None)})
         return result("held_stage_contract", "brief_provider_or_contract_failure")
+
+
+def review_release_redundancy(results: list[dict], model) -> list[dict]:
+    """Batch-stage editorial check after writing, *before* human-release queue.
+
+    The editor sees the real article angles, not just contract names. A
+    deterministic event-ID check guarantees that opposite contracts within
+    one event cannot both reach the human-ready queue, even if the model errs.
+    This never publishes anything and never discards the duplicate manuscript.
+    """
+    ready = [row for row in results if row["status"] == "shadow_brief_ready_unpublished"]
+    if not ready:
+        return results
+    if len(ready) == 1:
+        ready[0]["stage_trace"].append({"stage": "brief_release_editor", "status": "passed_unique"})
+        return results
+
+    candidates = [{"market_id": row["market"]["market_id"],
+                   "event_id": row["market"]["event_id"],
+                   "event_title": row["market"]["event_title"],
+                   "question": row["market"]["question"],
+                   "trigger": row["market"].get("trigger", "price_movement"),
+                   "headline": row["article"]["headline"],
+                   "deck": row["article"]["deck"],
+                   "paragraphs": [p["text"] for p in row["article"]["paragraphs"]],
+                   "editor_score": row.get("editor_score", 0)}
+                  for row in ready]
+    by_id = {row["market"]["market_id"]: row for row in ready}
+    try:
+        decision = model.complete("brief_release_editor", {"drafts": candidates,
+                                                             "publication_enabled": False})
+        reviews = decision["reviews"]
+        if (not isinstance(reviews, list) or len(reviews) != len(ready) or
+                len({r["market_id"] for r in reviews}) != len(ready) or
+                set(r["market_id"] for r in reviews) != set(by_id)):
+            raise ValueError("Incomplete batch editorial disposition")
+        duplicate_of: dict[str, str] = {}
+        reasons: dict[str, str] = {}
+        for review in reviews:
+            market_id, canonical = review["market_id"], review["duplicate_of"]
+            if (not isinstance(canonical, str) or
+                    (canonical and (canonical == market_id or canonical not in by_id)) or
+                    not isinstance(review["reason"], str) or
+                    not review["reason"].strip()):
+                raise ValueError("Invalid editorial reference")
+            duplicate_of[market_id] = canonical
+            reasons[market_id] = review["reason"][:300]
+        # No chains or cycles. Each duplicate points to a real surviving brief.
+        if any(duplicate_of.get(canonical) for canonical in duplicate_of.values() if canonical):
+            raise ValueError("Ambiguous canonical brief")
+    except (KeyError, TypeError, ValueError, RuntimeError, AttributeError):
+        for row in ready:
+            row["status"] = "held_release_editor"
+            row["reason"] = "batch_duplicate_review_unavailable"
+            row["stage_trace"].append({"stage": "brief_release_editor",
+                                       "status": "held_for_manual_comparison"})
+        return results
+
+    # Even an editorial model calling two contracts distinct must not approve
+    # a duplicate story about the same underlying event.
+    events: dict[tuple[str, str], list[dict]] = {}
+    for row in ready:
+        events.setdefault((row["market"].get("venue", "polymarket"),
+                           row["market"]["event_id"]), []).append(row)
+    for event_rows in events.values():
+        if len(event_rows) < 2:
+            continue
+        survivor = max(event_rows, key=lambda row: (row.get("editor_score", 0),
+                                                    len(row.get("external_leads", [])),
+                                                    row["market"].get("volume_24h_usd", 0)))
+        winner_id = survivor["market"]["market_id"]
+        # Prefer the mandated same-event canonical story, including if the
+        # model had grouped that candidate with an unrelated event.
+        duplicate_of[winner_id] = ""
+        for row in event_rows:
+            mid = row["market"]["market_id"]
+            if mid != winner_id:
+                duplicate_of[mid] = winner_id
+                reasons[mid] = "Same underlying event; complementary contract or overlapping story"
+
+    # If the deterministic override changed a canonical, re-point its former
+    # dependents to the surviving canonical rather than leaving a chain.
+    for mid, canonical in list(duplicate_of.items()):
+        if canonical and duplicate_of.get(canonical):
+            target = duplicate_of[canonical]
+            duplicate_of[mid] = target if target != mid else ""
+
+    for row in ready:
+        mid = row["market"]["market_id"]
+        canonical = duplicate_of[mid]
+        if canonical:
+            row["status"] = "held_redundant_brief"
+            row["reason"] = "duplicate_of_other_pilot_story"
+            row["duplicate_of"] = canonical
+            row["duplicate_rationale"] = reasons[mid]
+            row["stage_trace"].append({"stage": "brief_release_editor",
+                                       "status": "held_duplicate", "duplicate_of": canonical})
+        else:
+            row["stage_trace"].append({"stage": "brief_release_editor", "status": "passed_unique"})
+    return results
