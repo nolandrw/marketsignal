@@ -40,6 +40,9 @@ jobs:
       - name: Run up to twelve observed movers through private briefs
         id: curation
         run: python -m scripts.run_brief_pilot --max-cases 12 --min-delta-pp 1
+      - name: Private process overseer and safe workflow dashboard
+        if: ${{ always() && steps.curation.outcome != 'skipped' }}
+        run: python -m scripts.build_brief_oversight
       - name: Encrypt model output and linked coverage metadata
         if: ${{ always() && steps.curation.outcome != 'skipped' }}
         shell: bash

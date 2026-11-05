@@ -9,6 +9,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class WorkflowContractTests(unittest.TestCase):
+    def test_private_oversight_runs_before_encryption_without_publication(self):
+        workflow = (ROOT / ".github/workflows/brief-pilot.yml").read_text(encoding="utf-8")
+        self.assertIn("python -m scripts.build_brief_oversight", workflow)
+        self.assertLess(workflow.index("python -m scripts.build_brief_oversight"),
+                        workflow.index("Encrypt model output and linked coverage metadata"))
+        self.assertIn("permissions:\n      contents: read", workflow)
+        self.assertNotIn("contents: write", workflow)
+        self.assertNotIn("deploy-pages", workflow)
+
     def test_shadow_research_invocation_uses_three_real_cli_arguments(self):
         workflow = (ROOT / ".github/workflows/daily.yml").read_text(encoding="utf-8")
         self.assertRegex(
