@@ -1,0 +1,64 @@
+name: Lightweight MarketSignal briefs (manual, unpublished)
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider_hard_limit_confirmed:
+        description: 'Dedicated OpenAI project retains its $2 enforced hard spending limit'
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: marketsignal-paid-research-pilot
+  cancel-in-progress: false
+
+jobs:
+  briefs:
+    if: ${{ inputs.provider_hard_limit_confirmed == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    environment: research-pilot
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      MARKETSIGNAL_PILOT_RESULTS_PASSPHRASE: ${{ secrets.MARKETSIGNAL_PILOT_RESULTS_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require the API key and artifact passphrase
+        run: |
+          test -n "$OPENAI_API_KEY"
+          test -n "$MARKETSIGNAL_PILOT_RESULTS_PASSPHRASE"
+      - name: Run offline regression tests before any API expense
+        run: python -m unittest discover -s tests -q
+      - name: Run up to twelve observed movers through private briefs
+        id: curation
+        run: python -m scripts.run_brief_pilot --max-cases 12 --min-delta-pp 1
+      - name: Encrypt model output and linked coverage metadata
+        if: ${{ always() && steps.curation.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          files=()
+          if [ -d data/private/brief-pilot-results ]; then files+=(data/private/brief-pilot-results); fi
+          if [ -f data/private/brief-pilot-budget.sqlite ]; then files+=(data/private/brief-pilot-budget.sqlite); fi
+          if [ ${#files[@]} -gt 0 ]; then
+            tar -czf brief-results.tar.gz "${files[@]}"
+            printf '%s' "$MARKETSIGNAL_PILOT_RESULTS_PASSPHRASE" |
+              gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+                  --cipher-algo AES256 --symmetric --output brief-results.tar.gz.gpg brief-results.tar.gz
+            rm brief-results.tar.gz
+          fi
+      - name: Retain only encrypted output for seven days
+        if: ${{ always() && steps.curation.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketsignal-brief-pilot-encrypted
+          path: brief-results.tar.gz.gpg
+          if-no-files-found: ignore
+          retention-days: 7
