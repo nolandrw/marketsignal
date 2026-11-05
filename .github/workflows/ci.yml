@@ -53,6 +53,11 @@ jobs:
         timeout-minutes: 2
         continue-on-error: true
         run: python -m scripts.probe_pilot_sources > pilot-source-readiness.json
+      - name: Diagnose alternative news discovery with no model expense
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 1
+        continue-on-error: true
+        run: python -m scripts.probe_news_search
       - name: Retain sanitized pilot source readiness for seven days
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
