@@ -43,7 +43,7 @@ def _micro_usd(model: str, *, input_tokens: int, output_tokens: int,
 
 def estimate_pilot_cost(*, model: str = "gpt-5-mini", cases: int = 4,
                         calls_per_case: int = 5, input_tokens_per_call: int = 10000,
-                        output_tokens_per_call: int = 2400) -> dict:
+                        output_tokens_per_call: int = 5000) -> dict:
     if not 1 <= cases <= 100 or not 1 <= calls_per_case <= 20:
         raise ValueError("Unbounded pilot size")
     price = _micro_usd(model, input_tokens=input_tokens_per_call,
