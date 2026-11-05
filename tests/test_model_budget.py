@@ -6,13 +6,14 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 from marketsignal.cli import main
 from marketsignal.model_budget import (
     ModelBudget, ModelBudgetExceeded, estimate_pilot_cost,
 )
-from marketsignal.model_gateway import ResponsesJSONModel
+from marketsignal.model_gateway import ModelUnavailable, ResponsesJSONModel
 
 
 class FakeResponse(io.BytesIO):
@@ -99,6 +100,20 @@ class ModelBudgetTests(unittest.TestCase):
             with self.assertRaises(ModelBudgetExceeded):
                 gateway.complete("topic_lead", {"test": True})
         fake_http.assert_not_called()
+
+    def test_provider_http_status_is_safe_without_response_body(self):
+        budget = ModelBudget(self.db, "0.25")
+        secret_body = b"secret provider error response"
+        error = HTTPError("https://api.openai.com/v1/responses", 400,
+                          "invalid request", {}, io.BytesIO(secret_body))
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-only-dummy"}):
+            gateway = ResponsesJSONModel(budget=budget)
+        with patch("marketsignal.model_gateway.urlopen", side_effect=error):
+            with self.assertRaises(ModelUnavailable) as raised:
+                gateway.complete("topic_lead", {"test": True})
+        self.assertEqual(raised.exception.diagnostic_code, "provider_http_400")
+        self.assertNotIn("secret", str(raised.exception))
+        self.assertEqual(budget.summary()["attempted_calls"], 1)
 
 
 if __name__ == "__main__":
