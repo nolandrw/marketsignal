@@ -18,6 +18,10 @@ from .model_budget import ModelBudget
 class ModelUnavailable(RuntimeError):
     """An API request could not complete; do not expose provider bodies."""
 
+    def __init__(self, message: str, *, diagnostic_code: str = "model_unavailable"):
+        super().__init__(message)
+        self.diagnostic_code = diagnostic_code
+
 
 def _closed_schema(properties: dict, required: list[str] | None = None) -> dict:
     return {"type": "object", "properties": properties,
@@ -438,6 +442,11 @@ class ResponsesJSONModel:
             if reservation is not None:
                 self.budget.settle(reservation, parsed.get("usage"))
             return value
-        except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError) as exc:
+        except HTTPError as exc:
+            # A numeric status is diagnostic; the provider body and headers are not.
+            raise ModelUnavailable("Provider rejected model request",
+                                   diagnostic_code=f"provider_http_{int(exc.code)}") from None
+        except (URLError, TimeoutError, OSError, ValueError, KeyError) as exc:
             # Never include provider response bodies, prompts or credentials in logs.
-            raise ModelUnavailable("Provider request failed: " + type(exc).__name__) from None
+            raise ModelUnavailable("Provider request could not complete",
+                                   diagnostic_code="provider_" + type(exc).__name__) from None
