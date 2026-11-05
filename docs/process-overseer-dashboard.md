@@ -27,8 +27,8 @@ It reads each `brief-XX.json` plus an optional `manifest.json`, then writes:
 
 | Artifact | Audience | Contains |
 | --- | --- | --- |
-| `data/private/brief-pilot-results/oversight.json` | Owner/private | Stage counts, case-level metadata, failure signatures, improvement proposals, explicitly qualified model-cost estimate |
-| `data/private/brief-pilot-results/oversight.html` | Owner/private | Self-contained read-only browser dashboard with stage funnel, run outcome distribution, issue list, proposal cards and per-case statuses |
+| `data/private/brief-pilot-results/oversight.json` | Owner/private | Stage counts, per-agent observed throughput, case-level metadata, failure signatures, improvement proposals, explicitly qualified model-cost estimate, and null marketing-metric placeholders |
+| `data/private/brief-pilot-results/oversight.html` | Owner/private | Self-contained read-only browser dashboard with stage funnel, outcomes/defects, agent scorecard, proposal cards, audience-growth layout and per-case statuses |
 | GitHub Actions step summary | Workflow viewer | Aggregate gate counts, model call count and spend only; **no headlines, manuscripts, source URLs, prompts or private credentials** |
 
 Both case-level files enter the existing **encrypted seven-day workflow
@@ -52,6 +52,41 @@ private metric store with owner-approved permissions and retention.
   calibration, causal relevance of headlines, and source independence.
 - **Legacy run treatment:** a batch before `brief_release_editor` existed
   displays `—` for unique-after-release, not a falsely reassuring pass count.
+
+### Agent scorecard
+
+The scorecard sits immediately after the funnel and outcomes/defects. It
+reports **cases reaching each agent/function** and the observable next gate:
+
+| Function | Operational yield (not a quality grade) |
+| --- | --- |
+| Narrative scout | Returned a usable search path |
+| Coverage discovery (research tool) | Found at least one dated headline lead |
+| Commissioning editor | Commissioned a brief |
+| Brief writer | Produced a structurally accepted draft |
+| Fact-checker | Passed its **provisional automated** gate |
+| Batch release editor | Retained a unique draft, if executed |
+| Process overseer | Cases diagnosed and improvement proposals; **no publication authority** |
+
+Intentional editorial holds are not scored as model errors. An absent agent
+stage is *not run*, not a failure. The **human quality grade remains blank**
+until a labeled evaluation corpus exists; even a high operational yield does
+not certify fact accuracy, useful storytelling or good judgment.
+
+### Publication interest and readership metrics
+
+The dashboard reserves four groups for a future readership measurement layer:
+
+- Discovery/reach: unique readers, sessions, organic search share.
+- Engagement: article views, engaged time, article completion rate.
+- Loyalty: returning readers, newsletter subscribers, newsletter open rate.
+- Growth/revenue: article shares, newsletter signup rate, referral/affiliate clicks.
+
+An empty article-performance table reserves views, headline click-through,
+engaged time and shares for each published article. **All these values are
+null (`—`) until analytics is independently integrated**. No analytics
+tracking or personal data collection is added in this change. Blank does not
+mean zero, and the private, unpublished pilot cannot establish readership.
 
 ## Process experiments and approval
 

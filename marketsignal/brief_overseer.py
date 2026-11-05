@@ -37,6 +37,43 @@ STATUS_LABELS = {
     "held_stage_contract": "Stage failure",
 }
 
+# An operational gate yield is evidence of process throughput, not a model's
+# editorial skill or a human judgment of the writing. Preserve the distinction
+# in both the private JSON and its rendered dashboard.
+AGENT_STAGES = (
+    ("brief_scout", "Narrative scout", "AI agent", "Usable search path"),
+    ("coverage_discovery", "Coverage discovery", "Research tool", "Dated coverage found"),
+    ("brief_editor", "Commissioning editor", "AI agent", "Assignments commissioned"),
+    ("brief_writer", "Brief writer", "AI agent", "Structured drafts accepted"),
+    ("brief_factcheck", "Fact-checker", "AI agent", "Provisional passes"),
+    ("brief_release_editor", "Release editor", "AI agent", "Unique briefs retained"),
+)
+
+# Placeholders, not invented zeros. These are a future analytics schema only;
+# the private process report never queries visitor data or the publication.
+AUDIENCE_METRICS = (
+    ("Discovery & reach", (
+        ("unique_readers", "Unique readers"),
+        ("sessions", "Sessions"),
+        ("organic_search_share", "Organic search share"),
+    )),
+    ("Reading & engagement", (
+        ("article_views", "Article views"),
+        ("engaged_time", "Average engaged time"),
+        ("article_completion", "Article completion rate"),
+    )),
+    ("Loyalty & newsletter", (
+        ("returning_reader_rate", "Returning reader rate"),
+        ("newsletter_subscribers", "Newsletter subscribers"),
+        ("newsletter_open_rate", "Newsletter open rate"),
+    )),
+    ("Growth & monetization", (
+        ("article_shares", "Article shares"),
+        ("newsletter_signup_rate", "Newsletter signup rate"),
+        ("referral_clicks", "Referral or affiliate clicks"),
+    )),
+)
+
 
 def _proposal(code: str, n: int, diagnosis: str, experiment: str,
               success: str, *, priority: str = "medium") -> dict:
@@ -60,6 +97,52 @@ def _case_id(brief: dict, index: int) -> str:
     market_id = brief.get("market", {}).get("market_id")
     # Never use arbitrary free-form IDs as HTML or filenames.
     return str(market_id)[:80] if market_id is not None else f"case-{index:02d}"
+
+
+def _agent_scorecard(briefs: list[dict], proposals: list[dict]) -> list[dict]:
+    """Describe observed throughput; never manufacture editorial quality scores."""
+    rows = []
+    for stage, name, kind, yield_label in AGENT_STAGES:
+        handled = [b for b in briefs if _has_stage(b, stage)]
+        if stage == "brief_scout":
+            succeeded = sum(_has_stage(b, "coverage_discovery") for b in handled)
+        elif stage == "coverage_discovery":
+            succeeded = sum(any(t.get("stage") == stage and
+                                type(t.get("leads")) is int and t["leads"] > 0
+                                for t in b["stage_trace"]) for b in handled)
+        elif stage == "brief_editor":
+            succeeded = sum(_has_stage(b, "brief_writer") for b in handled)
+        elif stage == "brief_writer":
+            succeeded = sum(_has_stage(b, "brief_contract", "passed") for b in handled)
+        elif stage == "brief_factcheck":
+            succeeded = sum(_has_stage(b, "brief_factcheck_gate", "passed_provisionally")
+                            for b in handled)
+        else:
+            succeeded = sum(_has_stage(b, "brief_release_editor", "passed_unique")
+                            for b in handled)
+        rows.append({
+            "stage": stage, "name": name, "kind": kind, "cases_reached": len(handled),
+            "observed_yield": succeeded if handled else None,
+            "observed_yield_label": yield_label,
+            "human_quality_score": None,
+            "quality_status": "Not rated — no human evaluation labels",
+        })
+    rows.append({
+        "stage": "process_overseer", "name": "Process overseer", "kind": "Read-only audit",
+        "cases_reached": len(briefs), "observed_yield": None,
+        "observed_yield_label": f"{len(proposals)} proposed experiments; no auto-changes",
+        "human_quality_score": None, "quality_status": "Process diagnosis only",
+    })
+    return rows
+
+
+def _marketing_placeholders() -> dict:
+    return {"status": "not_instrumented", "data_as_of": None,
+            "groups": [{"title": title,
+                        "metrics": [{"key": key, "label": label, "value": None}
+                                    for key, label in metrics]}
+                       for title, metrics in AUDIENCE_METRICS],
+            "article_performance": []}
 
 
 def analyze_brief_run(briefs: list[dict], manifest: dict | None = None,
@@ -220,6 +303,8 @@ def analyze_brief_run(briefs: list[dict], manifest: dict | None = None,
                           "count": (gates[key] if key != "release" or release_seen else None)}
                          for label, key in FUNNEL],
         "issue_counts": counts, "improvement_proposals": proposals,
+        "agent_scorecard": _agent_scorecard(briefs, proposals),
+        "marketing": _marketing_placeholders(),
         "cases": cases,
         "provenance": {
             "uses_only_existing_private_run_results": True,
@@ -268,6 +353,43 @@ def _html_rows(rows: list[dict], *, proposals: bool = False) -> str:
         for c in rows)
 
 
+def _scorecard_rows(rows: list[dict]) -> str:
+    if not rows:
+        return '<tr><td colspan="4" class="empty">No agent trace available.</td></tr>'
+    output = []
+    for row in rows:
+        reached = int(row["cases_reached"])
+        yield_count = row["observed_yield"]
+        if yield_count is None:
+            result = ('<span class="muted">Not run</span>' if row["stage"] != "process_overseer"
+                      else '<span class="muted">Post-run analysis</span>')
+            meter = ''
+        else:
+            passed = int(yield_count)
+            result = f'<strong>{passed} / {reached}</strong>'
+            meter = (f'<div class="score-track" aria-label="{passed} of {reached} cases met the observed gate">'
+                     f'<div class="score-fill" style="width:{round(100 * passed / reached)}%"></div></div>')
+        output.append(
+            f'<tr><td><strong>{escape(row["name"])}</strong><div class="muted">'
+            f'{escape(row["kind"])}</div></td>'
+            f'<td class="number">{reached}</td>'
+            f'<td><div class="score-result">{result}{meter}</div>'
+            f'<div class="muted">{escape(row["observed_yield_label"])}</div></td>'
+            f'<td><span class="unrated">—</span><div class="muted">'
+            f'{escape(row["quality_status"])}</div></td></tr>')
+    return '\n'.join(output)
+
+
+def _marketing_blocks(marketing: dict) -> str:
+    return ''.join(
+        '<article class="audience-panel"><h3>' + escape(group["title"]) + '</h3>' +
+        ''.join('<div class="audience-item"><span>' + escape(metric["label"]) +
+                '</span><strong>' + (escape(str(metric["value"])) if metric["value"] is not None
+                                    else '—') + '</strong></div>'
+                for metric in group["metrics"]) + '</article>'
+        for group in marketing["groups"])
+
+
 def render_private_dashboard(report: dict, target: str | Path) -> Path:
     """Self-contained HTML review, no JS/CDNs/data fetches or article bodies."""
     dest = Path(target)
@@ -296,6 +418,9 @@ def render_private_dashboard(report: dict, target: str | Path) -> Path:
                        f'<b>{int(v)}</b></span>' for k, v in report["dispositions"].items())
     issue_rows = "".join(f'<li><span>{escape(k.replace("_", " "))}</span>'
                          f'<strong>{int(v)}</strong></li>' for k, v in report["issue_counts"].items())
+    scorecard = _scorecard_rows(report["agent_scorecard"])
+    marketing = report["marketing"]
+    audience_panels = _marketing_blocks(marketing)
     html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light"><title>MarketSignal | Private Process Oversight</title>
@@ -313,6 +438,15 @@ h1{{font:400 clamp(34px,5vw,52px) Georgia,serif;letter-spacing:-1px;margin:40px 
 .funnel-row b{{text-align:right;font-variant-numeric:tabular-nums}}.bar-bg{{background:#edf1f0;border-radius:20px;height:13px;overflow:hidden}}.bar{{height:100%;background:var(--teal);border-radius:20px}}
 .results{{display:flex;flex-wrap:wrap;gap:9px}}.result-chip{{background:#f1f5f4;border:1px solid var(--line);border-radius:20px;padding:7px 12px;font-size:12px}}.result-chip b{{margin-left:8px}}
 .issue-list{{list-style:none;padding:0;margin:0}}.issue-list li{{border-bottom:1px solid var(--line);display:flex;justify-content:space-between;padding:8px 0;font-size:13px}}
+.section-note{{color:var(--muted);font-size:13px;margin:-9px 0 17px;max-width:800px}}
+.score-table{{min-width:700px}}.score-table td{{vertical-align:middle}}.score-table th:last-child{{min-width:165px}}
+.score-result{{display:flex;gap:12px;align-items:center;min-height:22px}}.score-result strong{{font-variant-numeric:tabular-nums;min-width:48px}}
+.score-track{{height:6px;flex:1;max-width:150px;background:#e3ece9;border-radius:12px;overflow:hidden}}
+.score-fill{{height:100%;background:var(--teal);border-radius:12px}}
+.unrated{{font-weight:600;color:#73858a}}.caption-pill{{display:inline-block;margin-left:8px;border-radius:30px;border:1px solid var(--line);padding:2px 9px;font:11px system-ui,sans-serif;color:var(--muted);vertical-align:middle}}
+.audience-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}}.audience-panel{{border:1px solid var(--line);border-radius:12px;padding:20px 22px;background:var(--soft)}}
+.audience-panel h3{{font:400 20px Georgia,serif;margin:0 0 10px}}.audience-item{{display:flex;align-items:baseline;justify-content:space-between;gap:18px;border-top:1px solid var(--line);padding:11px 0;font-size:13px}}
+.audience-item strong{{font-size:23px;font-weight:400;color:#839397;line-height:1;font-variant-numeric:tabular-nums}}
 .ticket-grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}}.ticket{{border:1px solid var(--line);border-radius:10px;padding:19px;background:#fff}}
 .ticket h3{{font:400 21px Georgia,serif;margin:8px 0}}.ticket p{{margin:0 0 14px;font-size:13px}}.ticket-top{{display:flex;align-items:center;gap:10px}}
 .badge{{border-radius:13px;font-size:11px;padding:3px 9px;text-transform:uppercase;letter-spacing:.2px}}.high{{background:#ffecdc;color:#85450c}}.medium{{background:#e9f2f1;color:#205e57}}
@@ -321,13 +455,22 @@ h1{{font:400 clamp(34px,5vw,52px) Georgia,serif;letter-spacing:-1px;margin:40px 
 td{{border-top:1px solid var(--line);padding:13px 10px;font-size:13px;vertical-align:top}}td strong{{font-weight:600}}.number{{text-align:right;font-variant-numeric:tabular-nums}}.status{{font-size:12px;color:var(--teal)}}.code{{font:11px ui-monospace,monospace;color:#425b61}}
 .empty{{color:var(--muted);font-size:13px}}footer{{margin-top:40px;border-top:1px solid var(--line);padding-top:20px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:20px}}
 @media(max-width:850px){{.metrics,.ticket-grid{{grid-template-columns:repeat(2,1fr)}}.split{{grid-template-columns:1fr}}.wrap{{padding:18px}}}}
+@media(max-width:650px){{.audience-grid{{grid-template-columns:1fr}}}}
 @media(max-width:520px){{.metrics,.ticket-grid{{grid-template-columns:1fr}}.funnel-row{{grid-template-columns:115px 1fr 22px;gap:8px}}}}
 </style></head><body><div class="wrap"><header><div class="logo">Market<span>Signal</span><div class="muted">Process integrity · Private oversight</div></div><span class="tag">Read-only snapshot</span></header>
 <main><h1>Newsroom process oversight.</h1><p class="lead">{escape(report["run_label"])} · Diagnosing how the pipeline performs, not fact-checking the stories.</p>
 <div class="notice"><strong>Private and provisional.</strong> AI fact-check passes are not human verification. Proposed experiments require your approval. No prompt, threshold, article or publication state was changed by the overseer.</div>
 <div class="metrics">{cards}</div><div class="split"><section><h2>Stage-gate funnel</h2>{bars}</section>
 <section><h2>Outcomes &amp; defects</h2><div class="results">{outcomes}</div><h3>Process signals</h3><ul class="issue-list">{issue_rows}</ul></section></div>
+<section><h2>Agent-by-agent scorecard <span class="caption-pill">Operational metrics only</span></h2>
+<p class="section-note">Observed yields reflect gate throughput, not writing quality or factual accuracy. An editorial quality score requires labeled human evaluations; holds may be appropriate decisions, not agent mistakes.</p>
+<div class="tablewrap"><table class="score-table"><thead><tr><th>Agent / function</th><th class="number">Cases reached</th><th>Observed gate yield</th><th>Human quality grade</th></tr></thead><tbody>{scorecard}</tbody></table></div></section>
 <section><h2>Proposed improvement experiments</h2><div class="ticket-grid">{_html_rows(report["improvement_proposals"], proposals=True)}</div></section>
+<section><h2>Audience &amp; growth <span class="caption-pill">Future analytics</span></h2>
+<p class="section-note">Publication measurement layout only. No analytics integration or readership data is connected; blanks are unknown, not zero. This unpublished pilot cannot be used to infer demand.</p>
+<div class="audience-grid">{audience_panels}</div>
+<h3>Article performance</h3><div class="tablewrap"><table><thead><tr><th>Published article</th><th>Views</th><th>Headline CTR</th><th>Engaged time</th><th>Shares</th></tr></thead>
+<tbody><tr><td colspan="5" class="empty">No article analytics connected. Performance will appear here once publication and measurement are enabled.</td></tr></tbody></table></div></section>
 <section><h2>Case-by-case trace</h2><p class="muted">Only status metadata; no article bodies, source URLs or private credentials.</p><div class="tablewrap"><table>
 <thead><tr><th>Market question</th><th>Trigger</th><th>Disposition</th><th>Calls</th><th>Last stage</th></tr></thead><tbody>{_html_rows(report["cases"])}</tbody></table></div></section>
 </main><footer><span>Process overseer v1 · No automated adjustments · Publication disabled</span><span>Generated {escape(report["generated_at"])}</span></footer></div></body></html>"""

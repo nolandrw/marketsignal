@@ -74,12 +74,30 @@ class BriefOverseerTests(unittest.TestCase):
                             for p in report["improvement_proposals"]))
         self.assertFalse(report["provenance"]["publication_enabled"])
         self.assertFalse(report["provenance"]["automatic_prompt_edits"])
+        scorecard = {row["stage"]: row for row in report["agent_scorecard"]}
+        self.assertEqual(scorecard["brief_editor"]["cases_reached"], 6)
+        self.assertEqual(scorecard["brief_editor"]["observed_yield"], 6)
+        self.assertEqual(scorecard["brief_factcheck"]["observed_yield"], 4)
+        self.assertEqual(scorecard["brief_release_editor"]["observed_yield"], 3)
+        self.assertEqual(scorecard["process_overseer"]["cases_reached"], 6)
+        self.assertTrue(all(row["human_quality_score"] is None
+                            for row in report["agent_scorecard"]))
+        marketing = report["marketing"]
+        self.assertEqual(marketing["status"], "not_instrumented")
+        self.assertEqual(len(marketing["groups"]), 4)
+        self.assertEqual(marketing["article_performance"], [])
+        self.assertTrue(all(m["value"] is None for group in marketing["groups"]
+                            for m in group["metrics"]))
 
     def test_legacy_without_release_editor_is_not_marked_unique(self):
         report = analyze_brief_run([brief("a", "shadow_brief_ready_unpublished",
                                         with_release=False)])
         self.assertIsNone(report["summary"]["unique_after_release"])
         self.assertFalse(report["summary"]["release_editor_executed"])
+        release = next(row for row in report["agent_scorecard"]
+                       if row["stage"] == "brief_release_editor")
+        self.assertEqual(release["cases_reached"], 0)
+        self.assertIsNone(release["observed_yield"])
 
     def test_render_is_private_escaped_and_contains_no_manuscript_or_urls(self):
         report = analyze_brief_run(self.sample)
@@ -91,6 +109,13 @@ class BriefOverseerTests(unittest.TestCase):
             self.assertIn("&lt;img src=x onerror=alert(1)&gt;", html)
             self.assertNotIn("<img src=x", html)
             self.assertIn("Stage-gate funnel", html)
+            self.assertIn("Agent-by-agent scorecard", html)
+            self.assertIn("Human quality grade", html)
+            self.assertIn("Not rated", html)
+            self.assertIn("Audience &amp; growth", html)
+            self.assertIn("Returning reader rate", html)
+            self.assertIn("Newsletter open rate", html)
+            self.assertIn("No article analytics connected", html)
             self.assertIn("Proposed improvement experiments", html)
             self.assertNotIn("TOP SECRET", html)
             self.assertNotIn("secret.example.org", html)
@@ -101,6 +126,23 @@ class BriefOverseerTests(unittest.TestCase):
         self.assertNotIn("<img", job_summary)
         self.assertNotIn("TOP SECRET", job_summary)
         self.assertNotIn("Will sample", job_summary)
+
+    def test_scorecard_handles_missing_stages_and_escapes_text(self):
+        report = analyze_brief_run([{
+            "status": "held_search", "market": {"market_id": "q", "question": "Example"},
+            "stage_trace": [{"stage": "brief_scout", "status": "completed"}],
+            "model_calls": 1,
+        }])
+        score = {row["stage"]: row for row in report["agent_scorecard"]}
+        self.assertEqual(score["brief_scout"]["observed_yield"], 0)
+        self.assertIsNone(score["brief_writer"]["observed_yield"])
+        report["agent_scorecard"][0]["name"] = '<script>alert("x")</script>'
+        with TemporaryDirectory() as root:
+            dest = Path(root) / "private" / "score.html"
+            render_private_dashboard(report, dest)
+            html = dest.read_text(encoding="utf-8")
+            self.assertIn("&lt;script&gt;", html)
+            self.assertNotIn('<script>alert("x")</script>', html)
 
     def test_load_private_run_uses_local_artifacts_and_no_model(self):
         with TemporaryDirectory() as root:
