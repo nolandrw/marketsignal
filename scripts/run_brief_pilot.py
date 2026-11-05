@@ -1,0 +1,100 @@
+"""Manually approved, unpublished, bounded market-curation brief experiment.
+
+This uses actual successive Gamma archive observations and GDELT headline
+metadata. Unlike the four-case investigator pilot, it makes no claim to have
+captured original reporting, resolved why odds changed, or certified facts.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import time
+from pathlib import Path
+
+from marketsignal.agent_sources import GDELTSearch, PublicJSONTransport
+from marketsignal.brief_pilot import MAX_CASES, run_brief, select_movers
+from marketsignal.model_budget import ModelBudget
+from marketsignal.model_gateway import ResponsesJSONModel
+
+
+LIMIT_USD = "2.00"
+ARCHIVE_DIR = Path("data/archive")
+RESULTS = Path("data/private/brief-pilot-results")
+LEDGER = Path("data/private/brief-pilot-budget.sqlite")
+
+
+def latest_pair() -> tuple[Path, Path]:
+    records = sorted(ARCHIVE_DIR.glob("????-??-??.json"))
+    if len(records) < 2:
+        raise ValueError("Two real archived observations are required")
+    earlier, latest = records[-2:]
+    payload = json.loads(latest.read_text(encoding="utf-8"))
+    observed = payload["observed_at"]
+    if not isinstance(observed, int) or not 0 <= time.time() - observed <= 72 * 3600:
+        raise ValueError("Latest comparison is too stale for a live brief")
+    return earlier, latest
+
+
+def run(*, maximum: int, min_delta_pp: float) -> dict:
+    earlier, latest = latest_pair()
+    movements = select_movers(earlier, latest, maximum=maximum,
+                              threshold_pp=min_delta_pp)
+    if not movements:
+        raise ValueError("No genuine market changes met the lightweight threshold")
+    if not os.environ.get("OPENAI_API_KEY"):
+        raise ValueError("A dedicated API key is required")
+    budget = ModelBudget(LEDGER, LIMIT_USD)
+    model = ResponsesJSONModel("gpt-5-mini", budget=budget)
+    search = GDELTSearch(PublicJSONTransport(timeout=8, retries=0))
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    counts: dict[str, int] = {}
+    inventory = []
+    for index, movement in enumerate(movements, start=1):
+        result = run_brief(movement, model, search)
+        result["model_spending"] = budget.summary()
+        target = RESULTS / f"brief-{index:02d}.json"
+        target.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        counts[result["status"]] = counts.get(result["status"], 0) + 1
+        # Logs contain only IDs, gates, counts and provider expense. No article
+        # text, publisher lead URLs, API keys, prompts, or source material.
+        safe = {"market_id": movement.market.market_id,
+                "change_pp": movement.delta_pp,
+                "status": result["status"],
+                "model_calls": result["model_calls"],
+                "stage_trace": [{"stage": row["stage"], "status": row["status"],
+                                 "leads": row.get("leads"),
+                                 "issues": row.get("issues", [])}
+                                for row in result["stage_trace"]],
+                "model_spend_usd": budget.summary()["debited_usd"]}
+        print(json.dumps(safe))
+        inventory.append({"market_id": movement.market.market_id,
+                          "result_file": str(target), "status": result["status"]})
+    report = {"status": "unpublished_market_curation_pilot",
+              "cases": len(movements), "dispositions": counts,
+              "source_depth": "market_quote_plus_discovery_headlines_only",
+              "publication_enabled": False,
+              "human_factcheck_attested": False,
+              "budget": budget.summary(), "inventory": inventory}
+    (RESULTS / "manifest.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(json.dumps({k: v for k, v in report.items() if k != "inventory"}))
+    return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Private lightweight market-curation pilot")
+    parser.add_argument("--max-cases", type=int, default=MAX_CASES)
+    parser.add_argument("--min-delta-pp", type=float, default=1.0)
+    args = parser.parse_args()
+    try:
+        run(maximum=args.max_cases, min_delta_pp=args.min_delta_pp)
+        return 0
+    except (OSError, ValueError, RuntimeError, TypeError, KeyError) as exc:
+        print(json.dumps({"pilot": "held", "reason": type(exc).__name__,
+                          "publication_enabled": False}))
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

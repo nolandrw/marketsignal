@@ -27,6 +27,12 @@ An explicit [test-only real-case evaluation route](docs/real-case-evaluation-v1.
 and a [manual $2 four-story research-pilot operating procedure](docs/research-pilot-ops.md)
 can exercise handpicked subjects without inventing missing market-price history;
 neither adds a permanent human editorial intake or bypasses source/release gates.
+For faster market-triggered **curation rather than investigative features**, a
+separate [lightweight brief lane](docs/lightweight-briefs.md) can manually test
+up to 12 real movers with a substantially lower reader-value bar. It still
+attributes existing reporting and holds every output unpublished for human
+review. The first pilot discovers publisher headline metadata only; it does
+not claim to have read the linked articles or verified underlying events.
 
 MarketSignal is a portfolio-oriented, auditable pipeline for detecting meaningful
 changes in prediction-market contracts. It is designed to become a bounded
