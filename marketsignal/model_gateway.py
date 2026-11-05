@@ -380,7 +380,7 @@ class ResponsesJSONModel:
     """Authenticated, schema-constrained Responses API; instantiate only by CLI opt-in."""
 
     def __init__(self, model: str = "gpt-5-mini", *, timeout: int = 35,
-                 max_output_tokens: int = 2400, budget: ModelBudget | None = None):
+                 max_output_tokens: int = 5000, budget: ModelBudget | None = None):
         if not 3 <= timeout <= 90 or not 256 <= max_output_tokens <= 5000:
             raise ValueError("Unbounded model request")
         key = os.environ.get("OPENAI_API_KEY", "")
@@ -409,6 +409,9 @@ class ResponsesJSONModel:
             "input": [{"role": "user", "content": user_json}],
             "text": {"format": {"type": "json_schema", "name": stage,
                                 "strict": True, "schema": STAGE_SCHEMAS[stage]}},
+            # Reasoning tokens share this cap with the strict JSON output.
+            # The live pilot exhausted the earlier 2,400-token allowance.
+            "reasoning": {"effort": "low"},
             "max_output_tokens": self.max_output_tokens,
             "store": False,
         }
@@ -432,6 +435,10 @@ class ResponsesJSONModel:
                 raise ModelUnavailable("Provider response exceeds budget",
                                        diagnostic_code="response_body_oversize")
             parsed = json.loads(raw)
+            # An incomplete response can still contain verified usage. Keep a
+            # pessimistic reservation only when usage is absent or invalid.
+            if reservation is not None:
+                self.budget.settle(reservation, parsed.get("usage"))
             if parsed.get("status") != "completed":
                 # Never log provider text. These stable enums distinguish a
                 # token-exhaustion hold from other non-completed responses.
@@ -454,8 +461,6 @@ class ResponsesJSONModel:
             if not isinstance(value, dict):
                 raise ModelUnavailable("Model response is not an object",
                                        diagnostic_code="response_not_object")
-            if reservation is not None:
-                self.budget.settle(reservation, parsed.get("usage"))
             return value
         except HTTPError as exc:
             # A numeric status is diagnostic; the provider body and headers are not.
