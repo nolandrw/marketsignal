@@ -401,7 +401,8 @@ class ResponsesJSONModel:
             raise ValueError("Unknown newsroom stage")
         user_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         if len(user_json.encode("utf-8")) > 55_000:
-            raise ModelUnavailable("Stage input exceeds configured budget")
+            raise ModelUnavailable("Stage input exceeds configured budget",
+                                   diagnostic_code="stage_input_oversize")
         body = {
             "model": self.model,
             "instructions": STAGE_INSTRUCTIONS[stage],
@@ -424,21 +425,35 @@ class ResponsesJSONModel:
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 if response.status != 200:
-                    raise ModelUnavailable("Provider returned non-success status")
+                    raise ModelUnavailable("Provider returned non-success status",
+                                           diagnostic_code="provider_non_200")
                 raw = response.read(250_001)
             if len(raw) > 250_000:
-                raise ModelUnavailable("Provider response exceeds budget")
+                raise ModelUnavailable("Provider response exceeds budget",
+                                       diagnostic_code="response_body_oversize")
             parsed = json.loads(raw)
             if parsed.get("status") != "completed":
-                raise ModelUnavailable("Model response incomplete")
+                # Never log provider text. These stable enums distinguish a
+                # token-exhaustion hold from other non-completed responses.
+                incomplete = parsed.get("status") == "incomplete"
+                details = parsed.get("incomplete_details")
+                exhausted = (isinstance(details, dict) and
+                             details.get("reason") == "max_output_tokens")
+                code = ("response_incomplete_max_output_tokens" if exhausted
+                        else "response_incomplete" if incomplete
+                        else "response_noncompleted")
+                raise ModelUnavailable("Model response incomplete",
+                                       diagnostic_code=code)
             parts = [item.get("text", "") for output in parsed.get("output", [])
                      for item in output.get("content", [])
                      if item.get("type") == "output_text"]
             if len(parts) != 1:
-                raise ModelUnavailable("Model response is not a single JSON document")
+                raise ModelUnavailable("Model response is not a single JSON document",
+                                       diagnostic_code="response_output_text_count")
             value = json.loads(parts[0])
             if not isinstance(value, dict):
-                raise ModelUnavailable("Model response is not an object")
+                raise ModelUnavailable("Model response is not an object",
+                                       diagnostic_code="response_not_object")
             if reservation is not None:
                 self.budget.settle(reservation, parsed.get("usage"))
             return value
