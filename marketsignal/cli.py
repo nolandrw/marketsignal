@@ -510,6 +510,8 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError, KeyError, TypeError, ModelUnavailable,
                 RuntimeError, TimeoutError) as exc:
             print(json.dumps({"status": "research_hold", "reason": type(exc).__name__,
+                              "model_error_code": (exc.diagnostic_code if isinstance(exc, ModelUnavailable)
+                                                   else None),
                               "publication_enabled": False}))
             return 1
         output.parent.mkdir(parents=True, exist_ok=True)
