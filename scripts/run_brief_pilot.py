@@ -13,10 +13,10 @@ import os
 import time
 from pathlib import Path
 
-from marketsignal.agent_sources import GDELTSearch, PublicJSONTransport
 from marketsignal.brief_pilot import MAX_CASES, run_brief, select_movers
 from marketsignal.model_budget import ModelBudget
 from marketsignal.model_gateway import ResponsesJSONModel
+from marketsignal.news_rss import RSSNewsSearch
 
 
 LIMIT_USD = "2.00"
@@ -47,7 +47,9 @@ def run(*, maximum: int, min_delta_pp: float) -> dict:
         raise ValueError("A dedicated API key is required")
     budget = ModelBudget(LEDGER, LIMIT_USD)
     model = ResponsesJSONModel("gpt-5-mini", budget=budget)
-    search = GDELTSearch(PublicJSONTransport(timeout=8, retries=0))
+    # CI showed GDELT HTTP 429 from GitHub Actions, while Google and Bing RSS
+    # responded with parseable feeds. RSS is metadata-only, never body text.
+    search = RSSNewsSearch(timeout=7)
     RESULTS.mkdir(parents=True, exist_ok=True)
     counts: dict[str, int] = {}
     inventory = []

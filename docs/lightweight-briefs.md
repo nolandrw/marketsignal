@@ -19,13 +19,13 @@ the market quote to move.
 | --- | --- | --- |
 | Genuine signal | Same contract in two immutable, consecutive daily archive snapshots, within 48 hours; at least 1.0 percentage-point price move; $50k 24-hour volume and $25k liquidity | Incompatible tokens, missing history, stale quotes, thin markets |
 | Scout | One or two bounded searches for *reporting on the topic* | No meaningful discoverable reader question |
-| Coverage discovery | At least one dated HTTPS publisher headline from the bounded GDELT metadata index | Connector error or no relevant indexed coverage |
+| Coverage discovery | At least one dated HTTPS publisher headline from Google News RSS, with Bing News RSS fallback | Connector error or no relevant indexed coverage |
 | Curation editor | Reader usefulness >=50/100; an intelligible connection and a truthful, non-platform headline; up to four real source IDs | Irrelevance, no substance, deceptive or dubious title |
 | Writer | 120–450 words, 3–6 paragraphs, valid market and external references | Unsupported details, missing citations, malformed structure |
 | Brief fact check | Independent model review of each paragraph against exactly the dated quote and the indexed title text; one revision allowed | Misrepresentation, spurious causal inference, numerical errors |
 | Release | **Always private pending human review** | All AI-checked drafts remain unpublished |
 
-The external source material in this first pilot is **only news-index title
+The external source material in this pilot is **only news-index title
 metadata and a link**, not the full article text. That is deliberately labeled
 in each private result. The article must attribute anything about external
 events to the relevant publisher and must not embellish the publisher's title.
@@ -50,6 +50,13 @@ licensing and style before releasing anything.
   **never article text or source leads**.
 - The original, more demanding investigative pilot is unchanged and remains an
   option for stories that justify deeper research.
+
+**First live result (2026-11-04):** 12/12 cases held at coverage discovery;
+provider health diagnostics identified GDELT HTTP 429. A subsequent cost-free
+GitHub Actions probe confirmed Google News RSS and Bing News RSS connectivity.
+The curation lane now uses those indexes, with dated publisher attribution
+and the same provisional-review restrictions. The earlier no-coverage result
+is not evidence that the news subjects lacked coverage.
 
 ## What to evaluate after the run
 
