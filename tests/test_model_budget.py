@@ -116,5 +116,22 @@ class ModelBudgetTests(unittest.TestCase):
         self.assertEqual(budget.summary()["attempted_calls"], 1)
 
 
+    def test_incomplete_model_response_reports_safe_token_limit_reason(self):
+        budget = ModelBudget(self.db, "0.25")
+        response = {"status": "incomplete", "incomplete_details": {
+            "reason": "max_output_tokens", "private_debug": "secret response text"},
+            "output": [], "usage": {"input_tokens": 300, "output_tokens": 2400}}
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-only-dummy"}):
+            gateway = ResponsesJSONModel(budget=budget)
+        with patch("marketsignal.model_gateway.urlopen",
+                   return_value=FakeResponse(json.dumps(response).encode())):
+            with self.assertRaises(ModelUnavailable) as raised:
+                gateway.complete("topic_lead", {"test": True})
+        self.assertEqual(raised.exception.diagnostic_code,
+                         "response_incomplete_max_output_tokens")
+        self.assertNotIn("secret", str(raised.exception))
+        self.assertEqual(budget.summary()["attempted_calls"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
