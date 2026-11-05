@@ -6,10 +6,14 @@ Runs only against fixed hosts; does not print URL tokens or source text.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from xml.etree import ElementTree
+
+from marketsignal.agent_sources import SourceError
+from marketsignal.news_rss import RSSNewsSearch
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -57,9 +61,24 @@ def main() -> None:
             "q": query, "format": "rss", "setlang": "en-US",
         }), True),
     ]
+    archive = json.loads(Path("data/archive/2026-11-04.json").read_text())
+    observed = archive["observed_at"]
+    source = RSSNewsSearch(timeout=7)
+    usable = []
+    for subject in ("Iran ceasefire", "Federal Reserve interest rate"):
+        try:
+            leads = source.search(subject, observed - 30 * 86400, observed)
+            usable.append({"subject": subject, "lead_count": len(leads),
+                           "has_publisher_and_publication_date": all(
+                               x.author_key and x.posted_at and x.url.startswith("https://")
+                               for x in leads)})
+        except SourceError as exc:
+            usable.append({"subject": subject, "lead_count": 0,
+                           "error_type": type(exc).__name__})
     print(json.dumps({"mode": "no_cost_source_health", "paid_calls": 0,
                       "status": [inspect(name, url, rss=is_rss)
-                                 for name, url, is_rss in probes]}))
+                                 for name, url, is_rss in probes],
+                      "usable_dated_leads": usable}))
 
 
 if __name__ == "__main__":
