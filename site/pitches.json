@@ -1,44 +1,21 @@
 {
   "editorial_verification": "not_performed",
-  "eligible_for_topic_review": 7,
-  "observed_at": 1793997900,
+  "eligible_for_topic_review": 2,
+  "observed_at": 1794078900,
   "pitches": [
     {
       "baseline_times": {
-        "24h": 1793913300
+        "24h": 1793997900
       },
-      "category": "fed",
+      "category": "finance",
       "changes_pp": {
-        "24h": 14.0
+        "24h": 18.0
       },
       "eligible_for_topic_review": true,
-      "historical_daily_samples": 1,
-      "market_id": "3215008",
+      "historical_daily_samples": 0,
+      "market_id": "2413330",
       "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 80,
-      "reasons": [
-        "movement_24h",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": 1.885
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "fed",
-      "changes_pp": {
-        "24h": -13.0
-      },
-      "eligible_for_topic_review": true,
-      "historical_daily_samples": 1,
-      "market_id": "3215007",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
       "quantitative_score": 68,
       "reasons": [
         "movement_24h",
@@ -47,138 +24,24 @@
       "threshold_24h_pp": 8.0,
       "typical_daily_movement_pp": null,
       "venue": "polymarket",
-      "volume_to_historical_median": 1.021
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "trump cabinet",
-      "changes_pp": {
-        "24h": -9.0
-      },
-      "eligible_for_topic_review": true,
-      "historical_daily_samples": 1,
-      "market_id": "1811265",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 59,
-      "reasons": [
-        "movement_24h",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
       "volume_to_historical_median": null
     },
     {
       "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "resign",
-      "changes_pp": {
-        "24h": -10.5
-      },
-      "eligible_for_topic_review": true,
-      "historical_daily_samples": 1,
-      "market_id": "5211896",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 58,
-      "reasons": [
-        "movement_24h",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "fed",
-      "changes_pp": {
-        "24h": 12.5
-      },
-      "eligible_for_topic_review": true,
-      "historical_daily_samples": 1,
-      "market_id": "4620900",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 58,
-      "reasons": [
-        "movement_24h",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "lol",
-      "changes_pp": {
-        "24h": 10.05
-      },
-      "eligible_for_topic_review": true,
-      "historical_daily_samples": 1,
-      "market_id": "4397033",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 55,
-      "reasons": [
-        "movement_24h",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "politics",
-      "changes_pp": {
-        "24h": -10.0
-      },
-      "eligible_for_topic_review": true,
-      "historical_daily_samples": 0,
-      "market_id": "666660",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 52,
-      "reasons": [
-        "movement_24h",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
+        "24h": 1793997900
       },
       "category": "iran",
       "changes_pp": {
-        "24h": 4.25
+        "24h": 10.0
       },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "6367378",
+      "eligible_for_topic_review": true,
+      "historical_daily_samples": 0,
+      "market_id": "3399468",
       "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 50,
+      "observed_at": 1794078900,
+      "quantitative_score": 61,
       "reasons": [
+        "movement_24h",
         "uncalibrated_volatility"
       ],
       "threshold_24h_pp": 8.0,
@@ -188,17 +51,39 @@
     },
     {
       "baseline_times": {
-        "24h": 1793913300
+        "24h": 1793997900
       },
       "category": "iran",
       "changes_pp": {
-        "24h": 4.5
+        "24h": 6.0
       },
       "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
+      "historical_daily_samples": 1,
       "market_id": "5339986",
       "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
+      "quantitative_score": 48,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": 1.23
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "iran",
+      "changes_pp": {
+        "24h": 2.15
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 2,
+      "market_id": "6367378",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
       "quantitative_score": 44,
       "reasons": [
         "uncalibrated_volatility"
@@ -206,21 +91,43 @@
       "threshold_24h_pp": 8.0,
       "typical_daily_movement_pp": null,
       "venue": "polymarket",
-      "volume_to_historical_median": null
+      "volume_to_historical_median": 2.855
     },
     {
       "baseline_times": {
-        "24h": 1793913300
+        "24h": 1793997900
       },
-      "category": "taiwan",
+      "category": "iran",
       "changes_pp": {
-        "24h": 2.0
+        "24h": -2.0
       },
       "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "3580932",
+      "historical_daily_samples": 2,
+      "market_id": "4906128",
       "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
+      "quantitative_score": 39,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": 1.513
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "aliens",
+      "changes_pp": {
+        "24h": 0.15
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 2,
+      "market_id": "703257",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
       "quantitative_score": 38,
       "reasons": [
         "uncalibrated_volatility"
@@ -228,22 +135,123 @@
       "threshold_24h_pp": 8.0,
       "typical_daily_movement_pp": null,
       "venue": "polymarket",
+      "volume_to_historical_median": 3.067
+    },
+    {
+      "baseline_times": {},
+      "category": "sports",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "6171537",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 33,
+      "reasons": [
+        "no_historical_baseline",
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 15.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
       "volume_to_historical_median": null
     },
     {
       "baseline_times": {
-        "24h": 1793913300
+        "24h": 1793997900
       },
-      "category": "geopolitics",
+      "category": "sports",
       "changes_pp": {
-        "24h": 6.5
+        "24h": 1.0
       },
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "567688",
+      "market_id": "6179543",
       "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 36,
+      "observed_at": 1794078900,
+      "quantitative_score": 31,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 15.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "trump cabinet",
+      "changes_pp": {
+        "24h": -2.0
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 2,
+      "market_id": "1811265",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 30,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": 0.631
+    },
+    {
+      "baseline_times": {},
+      "category": "sports",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "6212130",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 27,
+      "reasons": [
+        "no_historical_baseline",
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 15.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {},
+      "category": "lol",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 1,
+      "market_id": "4397022",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 27,
+      "reasons": [
+        "no_historical_baseline",
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "lol",
+      "changes_pp": {
+        "24h": 0.0
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "4397025",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 26,
       "reasons": [
         "uncalibrated_volatility"
       ],
@@ -254,127 +262,17 @@
     },
     {
       "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "iran",
-      "changes_pp": {
-        "24h": -3.0
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "6282802",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 35,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": 0.785
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
+        "24h": 1793997900
       },
       "category": "taiwan",
       "changes_pp": {
         "24h": -1.0
       },
       "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "3580933",
+      "historical_daily_samples": 2,
+      "market_id": "3580932",
       "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 31,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "military strikes",
-      "changes_pp": {
-        "24h": -1.5
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "665374",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 30,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": 0.752
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "iran",
-      "changes_pp": {
-        "24h": -3.05
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "3128886",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 30,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": 0.335
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "politics",
-      "changes_pp": {
-        "24h": -2.0
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "2176270",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 29,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": 0.548
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "politics",
-      "changes_pp": {
-        "24h": -0.2
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "567621",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
       "quantitative_score": 26,
       "reasons": [
         "uncalibrated_volatility"
@@ -382,133 +280,212 @@
       "threshold_24h_pp": 8.0,
       "typical_daily_movement_pp": null,
       "venue": "polymarket",
-      "volume_to_historical_median": null
+      "volume_to_historical_median": 0.551
     },
     {
       "baseline_times": {
-        "24h": 1793913300
+        "24h": 1793997900
       },
-      "category": "iran",
+      "category": "rewards 20, 4.5, 50",
       "changes_pp": {
-        "24h": -1.0
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "4906128",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 26,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": 0.558
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "aliens",
-      "changes_pp": {
-        "24h": -0.15
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "703257",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 26,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": 0.81
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "world",
-      "changes_pp": {
-        "24h": -0.45
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "2374271",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 24,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "reza pahlavi",
-      "changes_pp": {
-        "24h": -0.2
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "663583",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 24,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": 0.549
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "politics",
-      "changes_pp": {
-        "24h": -0.55
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "666861",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 23,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "iran regime",
-      "changes_pp": {
-        "24h": -1.0
+        "24h": 2.25
       },
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "3215073",
+      "market_id": "678416",
       "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
+      "quantitative_score": 26,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "military strikes",
+      "changes_pp": {
+        "24h": -0.5
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 2,
+      "market_id": "665374",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 25,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": 0.553
+    },
+    {
+      "baseline_times": {},
+      "category": "sports",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "6163547",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 24,
+      "reasons": [
+        "no_historical_baseline",
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 15.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {},
+      "category": "sports",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "6236266",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
       "quantitative_score": 23,
       "reasons": [
+        "no_historical_baseline",
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 15.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "politics",
+      "changes_pp": {
+        "24h": -0.6
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "3399451",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 23,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "business",
+      "changes_pp": {
+        "24h": 0.8
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "691340",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 23,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "resign",
+      "changes_pp": {
+        "24h": 2.0
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 2,
+      "market_id": "5211896",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 23,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": 0.377
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "iran",
+      "changes_pp": {
+        "24h": 0.0
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 2,
+      "market_id": "6282802",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 22,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": 0.499
+    },
+    {
+      "baseline_times": {
+        "24h": 1793997900
+      },
+      "category": "crypto",
+      "changes_pp": {
+        "24h": -6.3
+      },
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "6563867",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 22,
+      "reasons": [
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 15.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {},
+      "category": "politics",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "2116493",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 21,
+      "reasons": [
+        "no_historical_baseline",
         "uncalibrated_volatility"
       ],
       "threshold_24h_pp": 8.0,
@@ -522,10 +499,10 @@
       "changes_pp": {},
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "4397025",
+      "market_id": "4397050",
       "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 22,
+      "observed_at": 1794078900,
+      "quantitative_score": 21,
       "reasons": [
         "no_historical_baseline",
         "uncalibrated_volatility"
@@ -534,85 +511,19 @@
       "typical_daily_movement_pp": null,
       "venue": "polymarket",
       "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "iran",
-      "changes_pp": {
-        "24h": 0.5
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
-      "market_id": "6667468",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 22,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "putin",
-      "changes_pp": {
-        "24h": 0.0
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 1,
-      "market_id": "560317",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 22,
-      "reasons": [
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": 0.442
     },
     {
       "baseline_times": {},
-      "category": "iran",
+      "category": "nba finals",
       "changes_pp": {},
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "3399468",
+      "market_id": "2243322",
       "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
       "quantitative_score": 20,
       "reasons": [
         "no_historical_baseline",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "iran",
-      "changes_pp": {
-        "24h": 2.5
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
-      "market_id": "3128768",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 20,
-      "reasons": [
         "uncalibrated_volatility"
       ],
       "threshold_24h_pp": 8.0,
@@ -626,10 +537,10 @@
       "changes_pp": {},
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "6179543",
+      "market_id": "6179536",
       "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 19,
+      "observed_at": 1794078900,
+      "quantitative_score": 20,
       "reasons": [
         "no_historical_baseline",
         "uncalibrated_volatility"
@@ -641,13 +552,13 @@
     },
     {
       "baseline_times": {},
-      "category": "lol",
+      "category": "politics",
       "changes_pp": {},
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "4397037",
+      "market_id": "666659",
       "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
       "quantitative_score": 19,
       "reasons": [
         "no_historical_baseline",
@@ -660,14 +571,90 @@
     },
     {
       "baseline_times": {},
-      "category": "business",
+      "category": "epl",
       "changes_pp": {},
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "691340",
+      "market_id": "2771335",
       "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
       "quantitative_score": 19,
+      "reasons": [
+        "no_historical_baseline",
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {},
+      "category": "iran",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 1,
+      "market_id": "5087226",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 18,
+      "reasons": [
+        "no_historical_baseline",
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {},
+      "category": "iran",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "4906129",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 18,
+      "reasons": [
+        "no_historical_baseline",
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {},
+      "category": "nba finals",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "2243313",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 18,
+      "reasons": [
+        "no_historical_baseline",
+        "uncalibrated_volatility"
+      ],
+      "threshold_24h_pp": 8.0,
+      "typical_daily_movement_pp": null,
+      "venue": "polymarket",
+      "volume_to_historical_median": null
+    },
+    {
+      "baseline_times": {},
+      "category": "nba finals",
+      "changes_pp": {},
+      "eligible_for_topic_review": false,
+      "historical_daily_samples": 0,
+      "market_id": "2243312",
+      "movement_surprise": null,
+      "observed_at": 1794078900,
+      "quantitative_score": 18,
       "reasons": [
         "no_historical_baseline",
         "uncalibrated_volatility"
@@ -683,72 +670,12 @@
       "changes_pp": {},
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "3399451",
+      "market_id": "2116494",
       "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 18,
-      "reasons": [
-        "no_historical_baseline",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {},
-      "category": "geopolitics",
-      "changes_pp": {},
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
-      "market_id": "5998481",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 18,
-      "reasons": [
-        "no_historical_baseline",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {},
-      "category": "bitcoin",
-      "changes_pp": {},
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
-      "market_id": "1345531",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 18,
-      "reasons": [
-        "no_historical_baseline",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {
-        "24h": 1793913300
-      },
-      "category": "iran",
-      "changes_pp": {
-        "24h": 0.0
-      },
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
-      "market_id": "6667467",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
       "quantitative_score": 17,
       "reasons": [
+        "no_historical_baseline",
         "uncalibrated_volatility"
       ],
       "threshold_24h_pp": 8.0,
@@ -758,14 +685,14 @@
     },
     {
       "baseline_times": {},
-      "category": "ethereum",
+      "category": "trump",
       "changes_pp": {},
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "6507419",
+      "market_id": "5787490",
       "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 16,
+      "observed_at": 1794078900,
+      "quantitative_score": 15,
       "reasons": [
         "no_historical_baseline",
         "uncalibrated_volatility"
@@ -777,90 +704,14 @@
     },
     {
       "baseline_times": {},
-      "category": "rewards 20, 4.5, 50",
+      "category": "sports",
       "changes_pp": {},
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "678416",
+      "market_id": "6208097",
       "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 16,
-      "reasons": [
-        "no_historical_baseline",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {},
-      "category": "ethereum",
-      "changes_pp": {},
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
-      "market_id": "6507425",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 12,
-      "reasons": [
-        "no_historical_baseline",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {},
-      "category": "finance",
-      "changes_pp": {},
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
-      "market_id": "2299952",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 10,
-      "reasons": [
-        "no_historical_baseline",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {},
-      "category": "iran",
-      "changes_pp": {},
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
-      "market_id": "6281141",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 9,
-      "reasons": [
-        "no_historical_baseline",
-        "uncalibrated_volatility"
-      ],
-      "threshold_24h_pp": 8.0,
-      "typical_daily_movement_pp": null,
-      "venue": "polymarket",
-      "volume_to_historical_median": null
-    },
-    {
-      "baseline_times": {},
-      "category": "crypto",
-      "changes_pp": {},
-      "eligible_for_topic_review": false,
-      "historical_daily_samples": 0,
-      "market_id": "6563867",
-      "movement_surprise": null,
-      "observed_at": 1793997900,
-      "quantitative_score": 9,
+      "observed_at": 1794078900,
+      "quantitative_score": 14,
       "reasons": [
         "no_historical_baseline",
         "uncalibrated_volatility"
@@ -872,13 +723,13 @@
     },
     {
       "baseline_times": {},
-      "category": "finance",
+      "category": "fdv",
       "changes_pp": {},
       "eligible_for_topic_review": false,
       "historical_daily_samples": 0,
-      "market_id": "2413330",
+      "market_id": "1005344",
       "movement_surprise": null,
-      "observed_at": 1793997900,
+      "observed_at": 1794078900,
       "quantitative_score": 8,
       "reasons": [
         "no_historical_baseline",

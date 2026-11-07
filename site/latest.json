@@ -1,23 +1,23 @@
 {
-  "date": "2026-11-06",
+  "date": "2026-11-07",
   "events_scanned": 800,
-  "markets_observed": 42,
+  "markets_observed": 36,
   "new_signals": 1,
-  "observed_at": 1793997900,
+  "observed_at": 1794078900,
   "reused_existing_snapshot": false,
   "schema_version": 1,
   "signals": [
     {
-      "baseline_at": 1793826900,
-      "change_pp": -18.1,
-      "current_price": 0.6945,
-      "liquidity": 29358.65764,
+      "baseline_at": 1793997900,
+      "change_pp": 18.0,
+      "current_price": 0.8745,
+      "liquidity": 48803.33333,
       "market_id": "2413330",
-      "observed_at": 1793997900,
-      "previous_price": 0.8755,
-      "score": 44,
-      "volume_24h": 63638.16346000001,
-      "window_hours": 48
+      "observed_at": 1794078900,
+      "previous_price": 0.6945,
+      "score": 48,
+      "volume_24h": 54569.63174900001,
+      "window_hours": 22
     }
   ]
 }
